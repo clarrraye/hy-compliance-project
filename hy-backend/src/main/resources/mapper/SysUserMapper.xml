@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- namespace必须与Mapper接口全路径一致 -->
+<mapper namespace="com.example.hy_backend.mapper.SysUserMapper">
+
+    <!-- 结果集1：含密码（仅登录验证用，匹配完整SysUser实体） -->
+    <resultMap id="FullUserMap" type="com.example.hy_backend.entity.SysUser">
+        <id column="user_id" property="userId"/>
+        <result column="username" property="username"/>
+        <result column="password" property="password"/>
+        <result column="real_name" property="realName"/>
+        <result column="role" property="role"/>
+        <result column="phone" property="phone"/>
+        <result column="is_enable" property="isEnable"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <!-- 结果集2：不含密码（大厅展示用，避免敏感信息泄露） -->
+    <resultMap id="UserInfoMap" type="com.example.hy_backend.entity.SysUser">
+        <id column="user_id" property="userId"/>
+        <result column="username" property="username"/>
+        <result column="real_name" property="realName"/>
+        <result column="role" property="role"/>
+        <result column="phone" property="phone"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <!-- 按账号查询用户（登录用，含密码）：表名改为你的实际表名，若为user则无需修改 -->
+    <select id="selectUserByUsername" parameterType="string" resultMap="FullUserMap">
+        SELECT user_id, username, password, real_name, role, phone, is_enable, create_time, update_time
+        FROM user
+        WHERE username = #{username}
+    </select>
+
+    <!-- 按ID查询个人信息（大厅展示用，不含密码）：表名改为你的实际表名 -->
+    <select id="selectUserInfoById" parameterType="int" resultMap="UserInfoMap">
+        SELECT user_id, username, real_name, role, phone, create_time
+        FROM user
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>

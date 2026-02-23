@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- namespace必须与你原有代码中调用的一致：com.example.hy_backend.mapper.ComplianceMapper -->
+<mapper namespace="com.example.hy_backend.mapper.ComplianceMapper">
+
+    <!-- 1. 海域列表查询（对应listSeaArea方法） -->
+    <select id="listSeaArea" resultType="com.example.hy_backend.entity.SeaArea">
+        SELECT sea_id AS seaId, sea_name AS seaName FROM sea_area ORDER BY sea_id ASC
+    </select>
+
+    <!-- 2. 物种列表查询（对应listSpecies方法） -->
+    <select id="listSpecies" resultType="com.example.hy_backend.entity.Species">
+        SELECT species_id AS speciesId, species_name AS speciesName FROM species ORDER BY species_id ASC
+    </select>
+
+    <!-- 禁渔规则联表查询（适配数据库真实字段rule_id，无ban_rule_id） -->
+    <select id="selectBanRuleWithName" parameterType="java.util.Map" resultType="com.example.hy_backend.entity.FishingBanRule">
+        SELECT
+        r.rule_id AS banRuleId,        <!-- 关键修正：数据库真实主键rule_id → 映射实体类banRuleId -->
+        r.sea_id AS seaId,
+        s.sea_name AS seaName,
+        r.species_id AS speciesId,
+        sp.species_name AS speciesName,
+        r.ban_start_time AS banStartTime,
+        r.ban_end_time AS banEndTime,
+        r.spec_require AS specRequire,
+        r.punish_desc AS punishDesc
+        FROM fishing_ban_rule r
+        LEFT JOIN sea_area s ON r.sea_id = s.sea_id
+        LEFT JOIN species sp ON r.species_id = sp.species_id
+        WHERE 1=1
+        <if test="seaId != null and seaId != 0">AND r.sea_id = #{seaId}</if>
+        <if test="speciesId != null and speciesId != 0">AND r.species_id = #{speciesId}</if>
+        <if test="month != null and month != ''">
+            AND (
+            SUBSTRING_INDEX(r.ban_start_time, '月', 1) * 1
+            &lt;=
+            SUBSTRING_INDEX(#{month}, '月', 1) * 1
+            AND
+            SUBSTRING_INDEX(r.ban_end_time, '月', 1) * 1
+            &gt;=
+            SUBSTRING_INDEX(#{month}, '月', 1) * 1
+            )
+        </if>
+    </select>
+
+    <!-- 4. 渔具合规查询（对应listFishingGear方法） -->
+    <select id="listFishingGear" resultType="java.util.Map">
+        SELECT
+        gear_id AS gearId,
+        gear_name AS gearName,
+        is_allow AS isAllow,
+        remark,
+        punish_desc AS punishDesc
+        FROM fishing_gear ORDER BY gear_id ASC
+    </select>
+
+    <!-- 5. 渔业政策模糊查询（对应searchPolicy方法） -->
+    <select id="searchPolicy" parameterType="java.util.Map" resultType="java.util.Map">
+        SELECT
+        policy_id AS policyId,
+        policy_title AS policyTitle,
+        publish_unit AS publishUnit,
+        publish_time AS publishTime,
+        official_content AS officialContent,
+        simple_content AS simpleContent
+        FROM fishing_policy
+        WHERE
+        policy_title LIKE #{keyword}
+        OR official_content LIKE #{keyword}
+        OR simple_content LIKE #{keyword}
+        ORDER BY publish_time DESC
+    </select>
+
+</mapper>

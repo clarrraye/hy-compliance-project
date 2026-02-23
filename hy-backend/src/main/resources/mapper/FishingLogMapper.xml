@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.hy_backend.mapper.FishingLogMapper">
+
+    <!-- 原有insert：保留不变 -->
+    <insert id="insert" parameterType="com.example.hy_backend.entity.FishingLog" useGeneratedKeys="true" keyProperty="logId">
+        INSERT INTO fishing_log (
+        user_id, sea_id, fishing_date,
+        fishing_gear, create_time, update_time
+        ) VALUES (
+        #{userId}, #{seaId}, #{fishingDate},
+        #{fishingGear}, #{createTime}, #{updateTime}
+        )
+    </insert>
+
+    <!-- 核心修复：selectLogList → 取消isCompliant写死，返回真实值 -->
+    <select id="selectLogList" resultType="com.example.hy_backend.vo.FishingLogVO">
+        SELECT
+        fl.log_id AS logId,
+        IFNULL(sa.sea_name, '未配置海域') AS seaName,
+        fl.fishing_date AS fishingDate,
+        fl.fishing_gear AS fishingGear,
+        fl.is_compliant AS isCompliant,  <!-- 关键：返回主表真实合规状态 -->
+        fl.uncompliant_reason AS uncompliantReason,  <!-- 新增：返回违规原因 -->
+        DATE_FORMAT(IFNULL(fl.create_time, NOW()), '%Y-%m-%d %H:%i:%s') AS createTime
+        FROM fishing_log fl
+        LEFT JOIN sea_area sa ON fl.sea_id = sa.sea_id
+        WHERE fl.user_id = #{userId}
+        <if test="fishingDate != null and fishingDate != ''">
+            AND fl.fishing_date = #{fishingDate}
+        </if>
+        <if test="seaId != null">
+            AND fl.sea_id = #{seaId}
+        </if>
+        <if test="isCompliant != null">
+            AND fl.is_compliant = #{isCompliant}
+        </if>
+        LIMIT #{pageNum}, #{pageSize}
+    </select>
+
+    <!-- 原有selectLogCount：保留不变 -->
+    <select id="selectLogCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM fishing_log fl
+        WHERE fl.user_id = #{userId}
+        <if test="fishingDate != null and fishingDate != ''">
+            AND fl.fishing_date = #{fishingDate}
+        </if>
+        <if test="seaId != null">
+            AND fl.sea_id = #{seaId}
+        </if>
+        <if test="isCompliant != null">
+            AND fl.is_compliant = #{isCompliant}
+        </if>
+    </select>
+
+    <!-- 新增：updateById → 更新主表合规状态 -->
+    <update id="updateById" parameterType="com.example.hy_backend.entity.FishingLog">
+        UPDATE fishing_log
+        <set>
+            is_compliant = #{isCompliant},
+            uncompliant_reason = #{uncompliantReason},
+            update_time = #{updateTime}
+        </set>
+        WHERE log_id = #{logId}
+    </update>
+
+    <!-- 原有统计SQL：保留不变 -->
+    <select id="countCompliance" resultType="java.util.Map">
+        SELECT
+        is_compliant AS type,
+        COUNT(*) AS value
+        FROM fishing_log
+        WHERE user_id = #{userId}
+        GROUP BY is_compliant
+    </select>
+
+    <select id="countSeaComplianceRate" resultType="java.util.Map">
+        SELECT
+        sa.sea_name AS seaName,
+        SUM(CASE WHEN fl.is_compliant = 1 THEN 1 ELSE 0 END) AS compliantNum,
+        COUNT(fl.log_id) AS totalNum
+        FROM fishing_log fl
+        LEFT JOIN sea_area sa ON fl.sea_id = sa.sea_id
+        WHERE fl.user_id = #{userId}
+        GROUP BY fl.sea_id, sa.sea_name
+    </select>
+
+    <select id="countSpeciesCatchTotal" resultType="java.util.Map">
+        SELECT
+        fs.species_name AS speciesName,
+        SUM(lsc.catch_num) AS totalCatch
+        FROM log_species lsc
+        LEFT JOIN fishing_species fs ON lsc.species_id = fs.species_id
+        LEFT JOIN fishing_log fl ON lsc.log_id = fl.log_id
+        WHERE fl.user_id = #{userId}
+        GROUP BY lsc.species_id, fs.species_name
+    </select>
+
+    <delete id="deleteLogById">
+        DELETE FROM fishing_log WHERE log_id = #{logId}
+    </delete>
+
+    <delete id="deleteLogSpeciesByLogId">
+        <!-- 注意：替换为你数据库中物种明细表的真实名称！ -->
+        <!-- 如果你之前的明细表是log_species，就把fishing_log_species改成log_species -->
+        DELETE FROM fishing_log_species WHERE log_id = #{logId}
+    </delete>
+
+</mapper>

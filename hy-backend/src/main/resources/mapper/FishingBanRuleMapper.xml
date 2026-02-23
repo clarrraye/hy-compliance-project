@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- namespace必须与Mapper接口全类名完全一致 -->
+<mapper namespace="com.example.hy_backend.mapper.FishingBanRuleMapper">
+
+    <!-- 结果集映射：数据库列名 → 实体类属性名（下划线转驼峰） -->
+    <resultMap id="BanRuleResultMap" type="com.example.hy_backend.entity.FishingBanRule">
+        <id column="rule_id" property="ruleId"/>          <!-- 主键映射 -->
+        <result column="sea_id" property="seaId"/>
+        <result column="species_id" property="speciesId"/>
+        <result column="ban_start_time" property="banStartTime"/>
+        <result column="ban_end_time" property="banEndTime"/>
+        <result column="spec_require" property="specRequire"/>
+        <result column="punish_desc" property="punishDesc"/>
+        <result column="sea_name" property="seaName"/>    <!-- 联表返回的海域名 -->
+        <result column="species_name" property="speciesName"/> <!-- 联表返回的物种名 -->
+    </resultMap>
+
+    <!-- 联表查询禁渔规则：与接口selectBanRuleWithName方法完全匹配 -->
+    <select id="selectBanRuleWithName" resultMap="BanRuleResultMap">
+        SELECT
+        r.*, s.sea_name, sp.species_name
+        FROM
+        fishing_ban_rule r
+        LEFT JOIN
+        sea_area s ON r.sea_id = s.sea_id
+        LEFT JOIN
+        species sp ON r.species_id = sp.species_id
+        WHERE
+        1=1
+        <!-- 动态条件：海域ID（非0才过滤） -->
+        <if test="seaId != null and seaId != 0">
+            AND r.sea_id = #{seaId}
+        </if>
+        <!-- 动态条件：物种ID（非0才过滤） -->
+        <if test="speciesId != null and speciesId != 0">
+            AND r.species_id = #{speciesId}
+        </if>
+        <!-- 动态条件：月份（匹配禁渔期），XML中&lt;代表<，&gt;代表>，已优化 -->
+        <if test="month != null and month != ''">
+            AND (
+            SUBSTRING_INDEX(r.ban_start_time, '月', 1) * 1
+            &lt;= SUBSTRING_INDEX(#{month}, '月', 1) * 1
+            AND
+            SUBSTRING_INDEX(r.ban_end_time, '月', 1) * 1
+            &gt;= SUBSTRING_INDEX(#{month}, '月', 1) * 1
+            )
+        </if>
+    </select>
+
+</mapper>
