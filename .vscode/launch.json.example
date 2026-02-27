@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "HyBackendApplication",
+            "request": "launch",
+            "mainClass": "com.example.hy_backend.HyBackendApplication",
+            "projectName": "hy-backend",
+            "env": {
+                // 请在此处填写您的本地数据库用户名
+                "DB_USERNAME": "root",
+                // 请在此处填写您的本地数据库密码
+                "DB_PASSWORD": "YOUR_LOCAL_PASSWORD_HERE"
+            }
+        }
+    ]
+}

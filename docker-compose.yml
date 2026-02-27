@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # 1. 数据库服务：自动创建，统一密码
+  hy-db:
+    image: mysql:8.0
+    container_name: hy-compliance-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: hy_root_password  # 项目专用密码，所有人统一
+      MYSQL_DATABASE: hy_compliance_db
+    ports:
+      - "3307:3306" # 映射到本机3307，避免和本地3306冲突
+    volumes:
+      - ./_localhost-2026_02_23_21_26_52-dump.sql:/docker-entrypoint-initdb.d/init.sql # 自动导入SQL脚本
+      - db_data:/var/lib/mysql
+
+  # 2. 后端服务（可选）：也可以选择在本地运行IDEA/VSCode
+  # 如果想纯容器化运行，可以取消注释
+  # hy-backend:
+  #   build: ./hy-backend
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     DB_HOST: hy-db
+  #     DB_PORT: 3306
+  #     DB_USERNAME: root
+  #     DB_PASSWORD: hy_root_password
+  #   depends_on:
+  #     - hy-db
+
+volumes:
+  db_data:

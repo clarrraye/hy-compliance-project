@@ -5,6 +5,7 @@ import com.example.hy_backend.dto.FishingLogDTO.FishingLogSpeciesDTO;
 import com.example.hy_backend.entity.*;
 import com.example.hy_backend.mapper.*;
 import com.example.hy_backend.service.FishingLogService;
+import com.example.hy_backend.util.SpecValidator;
 import com.example.hy_backend.vo.ChartDataVO;
 import com.example.hy_backend.vo.FishingLogVO;
 import org.apache.poi.ss.usermodel.*;
@@ -97,13 +98,13 @@ public class FishingLogServiceImpl implements FishingLogService {
                         speciesUnReason.append("当前海域该物种处于禁渔期（").append(rule.getBanStartTime()).append("-").append(rule.getBanEndTime()).append("）；");
                     }
 
-                    // 校验3：规格是否达标
+                    // 校验3：规格是否达标（使用通用规格校验工具）
                     String specRequire = rule.getSpecRequire();
                     if (StringUtils.hasText(specRequire) && StringUtils.hasText(speciesDTO.getCatchSpec())) {
-                        if (specRequire.contains("≥10cm") && speciesDTO.getCatchSpec().contains("cm")
-                                && Integer.parseInt(speciesDTO.getCatchSpec().replace("cm", "")) < 10) {
+                        SpecValidator.ValidationResult specResult = SpecValidator.validate(specRequire, speciesDTO.getCatchSpec());
+                        if (!specResult.isCompliant()) {
                             isSpeciesCompliant = false;
-                            speciesUnReason.append("捕捞规格不达标（要求：").append(specRequire).append("，实际：").append(speciesDTO.getCatchSpec()).append("）；");
+                            speciesUnReason.append("捕捞").append(specResult.getMessage()).append("；");
                         }
                     }
                 } catch (Exception e) {
