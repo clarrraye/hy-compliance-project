@@ -6,6 +6,9 @@ import com.example.hy_backend.service.SysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
+import java.util.List;
+
 /**
  * 用户服务实现类
  * 适配user表的登录校验逻辑，严格校验启用状态
@@ -39,5 +42,53 @@ public class SysUserServiceImpl implements SysUserService {
     @Override
     public SysUser getUserInfoById(Integer userId) {
         return sysUserMapper.selectUserInfoById(userId);
+    }
+        /**
+     * 获取用户列表（分页查询）
+     */
+    @Override
+    public List<SysUser> getUserList(Integer page, Integer size, String keyword) {
+        Integer offset = (page - 1) * size;
+        return sysUserMapper.selectUserList(offset, size, keyword);
+    }
+    /**
+     * 获取用户总数
+     */
+    @Override
+    public Integer getUserCount(String keyword) {
+        return sysUserMapper.selectUserCount(keyword);
+    }
+    /**
+     * 添加用户
+     */
+    @Override
+    public boolean addUser(SysUser user) {
+        // 检查用户名是否已存在
+        SysUser existingUser = sysUserMapper.selectUserByUsername(user.getUsername());
+        if (existingUser != null) {
+            return false;
+        }
+        
+        // 设置默认值
+        user.setCreateTime(new Date());
+        user.setUpdateTime(new Date());
+        user.setIsEnable(1); // 默认启用
+        
+        return sysUserMapper.insertUser(user) > 0;
+    }
+    /**
+     * 编辑用户
+     */
+    @Override
+    public boolean editUser(SysUser user) {
+        user.setUpdateTime(new Date());
+        return sysUserMapper.updateUser(user) > 0;
+    }
+    /**
+     * 删除用户
+     */
+    @Override
+    public boolean deleteUser(Integer userId) {
+        return sysUserMapper.deleteUser(userId) > 0;
     }
 }

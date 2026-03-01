@@ -4,6 +4,7 @@ import ComplianceQuery from '@/views/ComplianceQuery.vue'
 import LoginPage from '@/views/LoginPage.vue'
 import HallIndex from '@/views/HallIndex.vue'
 import FishingLog from '@/views/FishingLog.vue' // 新增
+import SystemManagement from '@/views/SystemManagement.vue'
 
 // 路由规则配置
 const routes = [
@@ -35,6 +36,12 @@ const routes = [
   {
     path: '/',
     redirect: '/login'
+  },
+  {
+    path: '/system',
+    name: 'SystemManagement',
+    component: SystemManagement,
+    meta: { title: '系统管理', requireAuth: true }
   }
 ]
 

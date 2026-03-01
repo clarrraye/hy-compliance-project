@@ -39,5 +39,46 @@
         FROM user
         WHERE user_id = #{userId}
     </select>
+        <!-- 查询用户列表（分页） -->
+    <select id="selectUserList" resultMap="FullUserMap">
+        SELECT user_id, username, password, real_name, role, phone, is_enable, create_time, update_time
+        FROM user
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE CONCAT('%', #{keyword}, '%') OR real_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+    <!-- 查询用户总数 -->
+    <select id="selectUserCount" resultType="int">
+        SELECT COUNT(*)
+        FROM user
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (username LIKE CONCAT('%', #{keyword}, '%') OR real_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </select>
+    <!-- 添加用户 -->
+    <insert id="insertUser" parameterType="com.example.hy_backend.entity.SysUser" useGeneratedKeys="true" keyProperty="userId">
+        INSERT INTO user (username, password, real_name, role, phone, is_enable, create_time, update_time)
+        VALUES (#{username}, #{password}, #{realName}, #{role}, #{phone}, #{isEnable}, #{createTime}, #{updateTime})
+    </insert>
+    <!-- 更新用户信息 -->
+    <update id="updateUser" parameterType="com.example.hy_backend.entity.SysUser">
+        UPDATE user
+        SET real_name = #{realName},
+            role = #{role},
+            phone = #{phone},
+            is_enable = #{isEnable},
+            update_time = #{updateTime}
+        WHERE user_id = #{userId}
+    </update>
+    <!-- 删除用户 -->
+    <delete id="deleteUser" parameterType="int">
+        DELETE FROM user WHERE user_id = #{userId}
+    </delete>
 
 </mapper>

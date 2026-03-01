@@ -23,4 +23,38 @@ public interface SysUserMapper {
      * @return 个人信息（无password，仅展示用）
      */
     SysUser selectUserInfoById(@Param("userId") Integer userId);
+        /**
+     * 查询用户列表（分页）
+     * @param offset 偏移量
+     * @param size 每页大小
+     * @param keyword 搜索关键词
+     * @return 用户列表
+     */
+    java.util.List<SysUser> selectUserList(@Param("offset") Integer offset, 
+                                          @Param("size") Integer size, 
+                                          @Param("keyword") String keyword);
+    /**
+     * 查询用户总数
+     * @param keyword 搜索关键词
+     * @return 用户总数
+     */
+    Integer selectUserCount(@Param("keyword") String keyword);
+    /**
+     * 添加用户
+     * @param user 用户信息
+     * @return 影响行数
+     */
+    Integer insertUser(SysUser user);
+    /**
+     * 更新用户信息
+     * @param user 用户信息
+     * @return 影响行数
+     */
+    Integer updateUser(SysUser user);
+    /**
+     * 删除用户
+     * @param userId 用户ID
+     * @return 影响行数
+     */
+    Integer deleteUser(@Param("userId") Integer userId);
 }

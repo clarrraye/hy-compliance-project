@@ -52,13 +52,11 @@
 
         <!-- 功能4：系统管理模块（管理员可见） -->
         <div v-if="userInfo.role === 2">
-          <el-tooltip content="功能暂未开发，敬请期待！" placement="top">
-            <div class="func-card disabled">
-              <div class="func-icon"><el-icon><Setting /></el-icon></div>
-              <div class="func-name">系统管理模块</div>
-              <div class="func-desc">基础数据管理 · 用户/日志管理</div>
-            </div>
-          </el-tooltip>
+                    <div class="func-card active" @click="toFunc('system')">
+            <div class="func-icon"><el-icon><Setting /></el-icon></div>
+            <div class="func-name">系统管理模块</div>
+            <div class="func-desc">用户管理 · 捕捞日志管理 · 系统监控</div>
+          </div>
         </div>
       </div>
     </div>

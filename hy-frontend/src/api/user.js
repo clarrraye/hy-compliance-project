@@ -12,5 +12,6 @@ export default {
   // 退出登录
   logout() {
     return request.get('/user/logout')
-  }
+   }
+
 }

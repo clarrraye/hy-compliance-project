@@ -33,4 +33,19 @@ public interface FishingLogMapper {
     int updateById(FishingLog fishingLog);
     int deleteLogById(@Param("logId") Long logId);
     int deleteLogSpeciesByLogId(@Param("logId") Long logId);
+
+        /**
+     * 获取所有用户的捕捞日志（管理员功能）
+     */
+    List<FishingLog> selectAllLogs(@Param("offset") Integer offset,
+                                   @Param("size") Integer size,
+                                   @Param("fishingDate") String fishingDate,
+                                   @Param("seaId") Integer seaId,
+                                   @Param("isCompliant") Integer isCompliant);
+    /**
+     * 获取所有捕捞日志总数（管理员功能）
+     */
+    Integer selectAllLogsCount(@Param("fishingDate") String fishingDate,
+                               @Param("seaId") Integer seaId,
+                               @Param("isCompliant") Integer isCompliant);
 }

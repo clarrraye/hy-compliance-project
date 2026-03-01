@@ -289,4 +289,39 @@ public class FishingLogServiceImpl implements FishingLogService {
 
         System.out.println("日志删除成功，logId：" + logId);
     }
+        /**
+     * 获取所有用户的捕捞日志（管理员功能）
+     */
+    @Override
+    public List<FishingLog> getAllLogs(Integer page, Integer size, String fishingDate, Integer seaId, Integer isCompliant) {
+        Integer offset = (page - 1) * size;
+        return fishingLogMapper.selectAllLogs(offset, size, fishingDate, seaId, isCompliant);
+    }
+    /**
+     * 获取所有捕捞日志总数（管理员功能）
+     */
+    @Override
+    public Integer getAllLogsCount(String fishingDate, Integer seaId, Integer isCompliant) {
+        return fishingLogMapper.selectAllLogsCount(fishingDate, seaId, isCompliant);
+    }
+    /**
+     * 删除捕捞日志（管理员功能）
+     */
+    @Override
+    public boolean deleteLog(Long logId) {
+        if (logId == null || logId <= 0) {
+            return false;
+        }
+        
+        try {
+            // 先删除物种明细
+            fishingLogMapper.deleteLogSpeciesByLogId(logId);
+            // 再删除主表
+            int deleteCount = fishingLogMapper.deleteLogById(logId);
+            return deleteCount > 0;
+        } catch (Exception e) {
+            System.out.println("删除日志失败：" + e.getMessage());
+            return false;
+        }
+    }
 }

@@ -107,5 +107,52 @@
         <!-- 如果你之前的明细表是log_species，就把fishing_log_species改成log_species -->
         DELETE FROM fishing_log_species WHERE log_id = #{logId}
     </delete>
+    <!-- 管理员功能：查询所有用户的日志 -->
+<select id="selectAllLogs" resultType="com.example.hy_backend.entity.FishingLog">
+    SELECT
+        fl.log_id AS logId,
+        fl.user_id AS userId,
+        fl.sea_id AS seaId,
+        fl.fishing_date AS fishingDate,
+        fl.fishing_gear AS fishingGear,
+        fl.create_time AS createTime,
+        fl.update_time AS updateTime,
+        fl.is_compliant AS isCompliant,
+        fl.uncompliant_reason AS uncompliantReason,
+        sa.sea_name AS seaName
+    FROM fishing_log fl
+    LEFT JOIN sea_area sa ON fl.sea_id = sa.sea_id
+    <where>
+        <if test="fishingDate != null and fishingDate != ''">
+            AND fl.fishing_date = #{fishingDate}
+        </if>
+        <if test="seaId != null">
+            AND fl.sea_id = #{seaId}
+        </if>
+        <if test="isCompliant != null">
+            AND fl.is_compliant = #{isCompliant}
+        </if>
+    </where>
+    ORDER BY fl.create_time DESC
+    LIMIT #{offset}, #{size}
+</select>
+
+<!-- 管理员功能：查询所有日志总数 -->
+<select id="selectAllLogsCount" resultType="java.lang.Integer">
+    SELECT COUNT(*)
+    FROM fishing_log fl
+    <where>
+        <if test="fishingDate != null and fishingDate != ''">
+            AND fl.fishing_date = #{fishingDate}
+        </if>
+        <if test="seaId != null">
+            AND fl.sea_id = #{seaId}
+        </if>
+        <if test="isCompliant != null">
+            AND fl.is_compliant = #{isCompliant}
+        </if>
+    </where>
+</select>
+
 
 </mapper>

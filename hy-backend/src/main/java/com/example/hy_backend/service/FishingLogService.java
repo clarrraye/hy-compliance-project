@@ -22,4 +22,18 @@ public interface FishingLogService {
 
     // 在FishingLogService接口中新增
     void deleteFishingLog(Long logId);
+        /**
+     * 获取所有用户的捕捞日志（管理员功能）
+     */
+    java.util.List<com.example.hy_backend.entity.FishingLog> getAllLogs(Integer page, Integer size, 
+                                                                      String fishingDate, Integer seaId, 
+                                                                      Integer isCompliant);
+    /**
+     * 获取所有捕捞日志总数（管理员功能）
+     */
+    Integer getAllLogsCount(String fishingDate, Integer seaId, Integer isCompliant);
+    /**
+     * 删除捕捞日志（管理员功能）
+     */
+    boolean deleteLog(Long logId);
 }
