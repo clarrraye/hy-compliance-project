@@ -1,6 +1,7 @@
 package com.example.hy_backend.controller;
 
 import com.example.hy_backend.dto.FishingLogDTO;
+import com.example.hy_backend.entity.FishingLog;
 import com.example.hy_backend.service.FishingLogService;
 import com.example.hy_backend.vo.ChartDataVO;
 import com.example.hy_backend.vo.FishingLogVO;
@@ -114,4 +115,43 @@ public class FishingLogController {
         }
         return result; // 返回Map（JSON格式），而非纯字符串
     }
+    // 在FishingLogController.java中添加管理员功能
+// 管理员功能：获取所有用户的捕捞日志
+@GetMapping("/admin/all")
+public Map<String, Object> getAllFishingLogs(@RequestParam(defaultValue = "1") Integer page,
+                                            @RequestParam(defaultValue = "10") Integer size,
+                                            @RequestParam(required = false) String fishingDate,
+                                            @RequestParam(required = false) Integer seaId,
+                                            @RequestParam(required = false) Integer isCompliant) {
+    Map<String, Object> result = new HashMap<>();
+    
+    // 管理员可以查看所有用户的日志，所以不需要指定userId
+    List<FishingLog> logList = fishingLogService.getAllLogs(page, size, fishingDate, seaId, isCompliant);
+    Integer total = fishingLogService.getAllLogsCount(fishingDate, seaId, isCompliant);
+    
+    result.put("code", 200);
+    result.put("msg", "查询成功");
+    result.put("data", logList);
+    result.put("total", total);
+    result.put("page", page);
+    result.put("size", size);
+    return result;
+}
+
+// 管理员功能：删除捕捞日志
+@PostMapping("/admin/delete")
+public Map<String, Object> deleteFishingLog(@RequestBody Map<String, Long> param) {
+    Map<String, Object> result = new HashMap<>();
+
+    Long logId = param.get("logId");
+    boolean success = fishingLogService.deleteLog(logId);
+    if (success) {
+        result.put("code", 200);
+        result.put("msg", "删除成功");
+    } else {
+        result.put("code", 500);
+        result.put("msg", "删除失败");
+    }
+    return result;
+}
 }

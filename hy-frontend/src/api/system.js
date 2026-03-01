@@ -1,7 +1,8 @@
 import request from '@/utils/request'
 
+// 修改system.js文件
 export default {
-  // 用户管理相关接口（管理员功能）
+  // 用户管理相关接口（直接使用SysUserController中的接口）
   getUserList(params) {
     return request.get('/user/list', { params })
   },
@@ -18,12 +19,12 @@ export default {
     return request.post('/user/delete', { userId })
   },
   
-  // 捕捞日志管理（管理员功能）
+  // 捕捞日志管理（使用FishingLogController中的管理员接口）
   getAllFishingLogs(params) {
-    return request.get('/system/fishingLogs', { params })
+    return request.get('/fishingLog/admin/all', { params })
   },
   
   deleteFishingLog(logId) {
-    return request.post('/system/fishingLogs/delete', { logId })
+    return request.post('/fishingLog/admin/delete', { logId })
   }
 }
