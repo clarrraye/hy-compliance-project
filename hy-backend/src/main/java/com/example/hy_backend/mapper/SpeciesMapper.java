@@ -15,4 +15,8 @@ public interface SpeciesMapper {
     // 保留你原有listAll方法的注解SQL，无需修改
     @Select("SELECT species_id AS speciesId, species_name AS speciesName, protect_level AS protectLevel, is_catch AS isCatch FROM species ORDER BY species_id")
     List<Species> listAll();
+
+    // 新增：根据名称模糊查询（用于AI识别结果匹配）
+    @Select("SELECT * FROM species WHERE species_name LIKE CONCAT('%', #{name}, '%') LIMIT 1")
+    Species selectByName(String name);
 }

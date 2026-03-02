@@ -36,13 +36,11 @@
         </div>
 
         <!-- 功能2：物种识别与合规校验 -->
-        <el-tooltip content="功能暂未开发，敬请期待！" placement="top">
-          <div class="func-card disabled">
-            <div class="func-icon"><el-icon><Camera /></el-icon></div>
-            <div class="func-name">物种识别与合规校验模块</div>
-            <div class="func-desc">AI识别 · 误捕应急指引</div>
-          </div>
-        </el-tooltip>
+        <div class="func-card active" @click="toFunc('species')">
+          <div class="func-icon"><el-icon><Camera /></el-icon></div>
+          <div class="func-name">物种识别与合规校验模块</div>
+          <div class="func-desc">AI识别 · 误捕应急指引</div>
+        </div>
         <!-- 功能3：捕捞日志与合规自查 -->
 <div class="func-card active" @click="toFunc('fishingLog')">
   <div class="func-icon"><el-icon><Document /></el-icon></div>

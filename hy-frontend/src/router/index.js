@@ -5,6 +5,7 @@ import LoginPage from '@/views/LoginPage.vue'
 import HallIndex from '@/views/HallIndex.vue'
 import FishingLog from '@/views/FishingLog.vue' // 新增
 import SystemManagement from '@/views/SystemManagement.vue'
+import SpeciesIdentify from '@/views/SpeciesIdentify.vue' // 新增物种识别
 
 // 路由规则配置
 const routes = [
@@ -32,6 +33,12 @@ const routes = [
     name: 'FishingLog',
     component: FishingLog,
     meta: { title: '捕捞日志与合规自查', requireAuth: true }
+  },
+  {
+    path: '/species', // 对应的页面
+    name: 'SpeciesIdentify',
+    component: SpeciesIdentify,
+    meta: { title: '智能物种识别', requireAuth: true }
   },
   {
     path: '/',
