@@ -36,4 +36,8 @@ public interface FishingLogService {
      * 删除捕捞日志（管理员功能）
      */
     boolean deleteLog(Long logId);
+        /**
+     * 获取所有用户的捕捞日志VO（管理员功能）
+     */
+    List<FishingLogVO> getAllLogsVO(Integer page, Integer size, String fishingDate, Integer seaId, Integer isCompliant);
 }

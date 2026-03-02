@@ -126,7 +126,7 @@ public Map<String, Object> getAllFishingLogs(@RequestParam(defaultValue = "1") I
     Map<String, Object> result = new HashMap<>();
     
     // 管理员可以查看所有用户的日志，所以不需要指定userId
-    List<FishingLog> logList = fishingLogService.getAllLogs(page, size, fishingDate, seaId, isCompliant);
+    List<FishingLogVO> logList = fishingLogService.getAllLogsVO(page, size, fishingDate, seaId, isCompliant);
     Integer total = fishingLogService.getAllLogsCount(fishingDate, seaId, isCompliant);
     
     result.put("code", 200);

@@ -7,6 +7,7 @@ import java.util.Date;
 @Data
 public class FishingLogVO {
     private Long logId;              // 日志ID
+    private Integer userId;          // 用户ID
     private String seaName;          // 海域名称
     private LocalDate fishingDate;   // 捕捞日期
     private String fishingGear;      // 渔具类型

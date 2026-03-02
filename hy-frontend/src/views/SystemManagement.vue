@@ -77,7 +77,11 @@
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="createTime" label="创建时间" width="160" />
+              <el-table-column label="创建时间" width="160">
+                <template #default="scope">
+                  {{ scope.row.createTime ? new Date(scope.row.createTime).toLocaleString() : '-' }}
+                </template>
+              </el-table-column>
               <el-table-column label="操作" width="200" fixed="right">
                 <template #default="scope">
                   <el-button size="small" @click="showEditUserDialog(scope.row)">
@@ -121,7 +125,7 @@
                 type="date"
                 @change="loadLogList"
               />
-              <el-select
+                <el-select
                 v-model="logSearchSeaId"
                 placeholder="选择海域"
                 style="width: 200px"
@@ -129,7 +133,18 @@
                 @change="loadLogList"
               >
                 <el-option label="全部海域" value="" />
-                <el-option v-for="sea in seaList" :key="sea.seaId" :label="sea.seaName" :value="sea.seaId" />
+                <el-option 
+                  v-for="sea in seaList" 
+                  :key="sea.seaId" 
+                  :label="sea.seaName" 
+                  :value="sea.seaId" 
+                />
+                <el-option 
+                  v-if="seaList.length === 0" 
+                  label="暂无海域数据" 
+                  value="" 
+                  disabled 
+                />
               </el-select>
               <el-select
                 v-model="logSearchCompliant"
@@ -143,40 +158,43 @@
                 <el-option label="违规" :value="0" />
               </el-select>
             </div>
-
             <!-- 日志列表 -->
-            <el-table
-              :data="logList"
-              v-loading="logLoading"
-              style="width: 100%"
-              border
-            >
-              <el-table-column prop="logId" label="日志ID" width="80" />
-              <el-table-column prop="userId" label="用户ID" width="80" />
-              <el-table-column prop="seaName" label="捕捞海域" width="120" />
-              <el-table-column prop="fishingDate" label="捕捞日期" width="120" />
-              <el-table-column prop="fishingGear" label="渔具类型" width="120" />
-              <el-table-column prop="isCompliant" label="合规状态" width="100">
-                <template #default="scope">
-                  <el-tag :type="scope.row.isCompliant === 1 ? 'success' : 'danger'">
-                    {{ scope.row.isCompliant === 1 ? '合规' : '违规' }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="uncompliantReason" label="违规原因" show-overflow-tooltip />
-              <el-table-column prop="createTime" label="创建时间" width="160" />
-              <el-table-column label="操作" width="100" fixed="right">
-                <template #default="scope">
-                  <el-button
-                    size="small"
-                    type="danger"
-                    @click="handleDeleteLog(scope.row.logId)"
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
+<el-table
+  :data="logList"
+  v-loading="logLoading"
+  style="width: 100%"
+  border
+>
+  <el-table-column prop="logId" label="日志ID" width="80" />
+  <el-table-column prop="userId" label="用户ID" width="80" />
+  <el-table-column prop="seaName" label="捕捞海域" width="120" />
+  <el-table-column prop="fishingDate" label="捕捞日期" width="120" />
+  <el-table-column prop="fishingGear" label="渔具类型" width="120" />
+  <el-table-column prop="isCompliant" label="合规状态" width="100">
+    <template #default="scope">
+      <el-tag :type="scope.row.isCompliant === 1 ? 'success' : 'danger'">
+        {{ scope.row.isCompliant === 1 ? '合规' : '违规' }}
+      </el-tag>
+    </template>
+  </el-table-column>
+  <el-table-column prop="uncompliantReason" label="违规原因" show-overflow-tooltip />
+  <el-table-column label="创建时间" width="160">
+  <template #default="scope">
+    {{ scope.row.createTime ? new Date(scope.row.createTime).toLocaleString() : '-' }}
+  </template>
+</el-table-column>
+  <el-table-column label="操作" width="100" fixed="right">
+    <template #default="scope">
+      <el-button
+        size="small"
+        type="danger"
+        @click="handleDeleteLog(scope.row.logId)"
+      >
+        删除
+      </el-button>
+    </template>
+  </el-table-column>
+</el-table>
 
             <!-- 分页 -->
             <div class="pagination">
@@ -242,7 +260,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted , watch} from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Search, Plus, ArrowDown } from '@element-plus/icons-vue'
@@ -305,7 +323,17 @@ onMounted(() => {
   loadUserInfo()
   loadUserList()
   loadSeaList()
+  loadLogList() 
 })
+// 添加标签页变化监听
+watch(
+  () => activeTab.value,
+  (newTab) => {
+    if (newTab === 'logManagement') {
+      loadLogList()
+    }
+  }
+)
 
 // 加载用户信息
 const loadUserInfo = async () => {
@@ -354,12 +382,23 @@ const loadUserList = async () => {
 // 加载海域列表
 const loadSeaList = async () => {
   try {
-    const response = await complianceApi.getSeaAreaList()
-    if (response.code === 200) {
-      seaList.value = response.data
+    const response = await complianceApi.listSeaArea()
+    console.log('海域列表API响应:', response) // 添加调试信息
+    // 根据API返回格式调整处理方式
+    if (Array.isArray(response)) {
+      // 如果API返回的是数组（如用户日志页面的情况）
+      seaList.value = response
+    } else if (response && response.code === 200) {
+      // 如果API返回的是包含code和data的对象
+      seaList.value = response.data || []
+    } else {
+      // 其他情况设为空数组
+      seaList.value = []
     }
+    console.log('加载海域列表成功:', seaList.value) // 添加调试信息
   } catch (error) {
     console.error('获取海域列表失败:', error)
+    seaList.value = [] // 确保列表为空
   }
 }
 
@@ -380,9 +419,16 @@ const loadLogList = async () => {
       logTotal.value = response.total
     } else {
       ElMessage.error(response.msg || '获取日志列表失败')
+      // 设置为空数组以确保表格清空
+      logList.value = []
+      logTotal.value = 0
     }
   } catch (error) {
     ElMessage.error('获取日志列表失败')
+    // 设置为空数组以确保表格清空
+    logList.value = []
+    logTotal.value = 0
+    console.error('获取日志列表失败:', error)
   } finally {
     logLoading.value = false
   }

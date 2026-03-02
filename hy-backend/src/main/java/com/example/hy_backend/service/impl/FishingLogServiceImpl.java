@@ -324,4 +324,12 @@ public class FishingLogServiceImpl implements FishingLogService {
             return false;
         }
     }
+        /**
+     * 获取所有用户的捕捞日志VO（管理员功能）
+     */
+    @Override
+    public List<FishingLogVO> getAllLogsVO(Integer page, Integer size, String fishingDate, Integer seaId, Integer isCompliant) {
+        Integer offset = (page - 1) * size;
+        return fishingLogMapper.selectAllLogsVO(offset, size, fishingDate, seaId, isCompliant);
+    }
 }
