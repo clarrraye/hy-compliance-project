@@ -182,5 +182,21 @@
     </where>
 </select>
 
+    <!-- 根据时间范围查询日志列表 -->
+    <select id="selectLogListWithDateCondition" resultType="com.example.hy_backend.vo.FishingLogVO">
+        SELECT l.log_id, l.user_id, s.sea_name, l.fishing_date, l.fishing_gear, l.is_compliant, l.uncompliant_reason, l.create_time
+        FROM fishing_log l
+        LEFT JOIN sea_area s ON l.sea_id = s.sea_id
+        WHERE l.user_id = #{userId}
+        ${dateCondition}
+        ORDER BY l.fishing_date DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+       <!-- 根据日志ID查询物种明细 -->
+    <select id="selectByLogId" resultType="com.example.hy_backend.entity.FishingLogSpecies">
+        SELECT * FROM fishing_log_species WHERE log_id = #{logId}
+    </select>
+
 
 </mapper>

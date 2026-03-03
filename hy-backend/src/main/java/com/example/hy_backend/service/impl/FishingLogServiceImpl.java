@@ -101,7 +101,9 @@ public class FishingLogServiceImpl implements FishingLogService {
                     // 校验3：规格是否达标（使用通用规格校验工具）
                     String specRequire = rule.getSpecRequire();
                     if (StringUtils.hasText(specRequire) && StringUtils.hasText(speciesDTO.getCatchSpec())) {
-                        SpecValidator.ValidationResult specResult = SpecValidator.validate(specRequire, speciesDTO.getCatchSpec());
+                        // 将规格标准化为公斤单位（如果原来是重量单位）
+                        String standardizedSpec = standardizeWeightUnit(speciesDTO.getCatchSpec());
+                        SpecValidator.ValidationResult specResult = SpecValidator.validate(specRequire, standardizedSpec);
                         if (!specResult.isCompliant()) {
                             isSpeciesCompliant = false;
                             speciesUnReason.append("捕捞").append(specResult.getMessage()).append("；");
@@ -151,6 +153,47 @@ public class FishingLogServiceImpl implements FishingLogService {
         return logId;
     }
 
+    /**
+     * 将重量单位标准化为公斤
+     * @param originalSpec 原始规格字符串，如"500g"、"0.5kg"、"1斤"
+     * @return 标准化后的规格字符串，如"0.5kg"
+     */
+    private String standardizeWeightUnit(String originalSpec) {
+        if (originalSpec == null || originalSpec.trim().isEmpty()) {
+            return originalSpec;
+        }
+
+        // 定义重量单位转换系数（转换为公斤）
+        java.util.Map<String, Double> weightUnits = new java.util.HashMap<>();
+        weightUnits.put("g", 0.001);     // 克转公斤
+        weightUnits.put("kg", 1.0);      // 公斤本身
+        weightUnits.put("公斤", 1.0);      // 中文公斤
+        weightUnits.put("斤", 0.5);       // 斤转公斤
+        weightUnits.put("千克", 1.0);     // 中文千克
+        weightUnits.put("克", 0.001);     // 中文克
+
+        // 提取数字和单位
+        java.util.regex.Pattern numberPattern = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)");
+        java.util.regex.Pattern unitPattern = java.util.regex.Pattern.compile("([a-zA-Z\u4e00-\u9fa5]+)");
+        
+        java.util.regex.Matcher numberMatcher = numberPattern.matcher(originalSpec);
+        java.util.regex.Matcher unitMatcher = unitPattern.matcher(originalSpec);
+
+        if (numberMatcher.find() && unitMatcher.find()) {
+            double value = Double.parseDouble(numberMatcher.group(1));
+            String unit = unitMatcher.group(1);
+            
+            // 如果是重量单位，则转换为公斤
+            if (weightUnits.containsKey(unit)) {
+                double kgValue = value * weightUnits.get(unit);
+                return String.format("%.3f", kgValue) + "kg";
+            }
+        }
+        
+        // 如果不是重量单位，直接返回原值
+        return originalSpec;
+    }
+
     // 原有getLogList方法：保留不变
     @Override
     public List<FishingLogVO> getLogList(Integer userId, String fishingDate, Integer seaId, Integer isCompliant, Integer pageNum, Integer pageSize) {
@@ -164,11 +207,14 @@ public class FishingLogServiceImpl implements FishingLogService {
         return fishingLogMapper.selectLogCount(userId, fishingDate, seaId, isCompliant);
     }
 
-    // 原有getChartData方法：保留不变
+    // 修改getChartData方法：支持时间范围筛选和鱼种重量统计
     @Override
     public ChartDataVO getChartData(Integer userId, String timeRange) {
-        ChartDataVO vo = new ChartDataVO();
-        List<FishingLogVO> logList = fishingLogMapper.selectLogList(userId, null, null, null, 0, Integer.MAX_VALUE);
+        // 根据时间范围构建查询条件
+        String dateCondition = buildDateCondition(timeRange);
+        
+        // 查询指定时间范围内的日志
+        List<FishingLogVO> logList = fishingLogMapper.selectLogListWithDateCondition(userId, dateCondition, 0, Integer.MAX_VALUE);
 
         if (logList == null) {
             logList = new ArrayList<>();
@@ -176,99 +222,168 @@ public class FishingLogServiceImpl implements FishingLogService {
         logList = logList.stream().filter(Objects::nonNull).collect(Collectors.toList());
 
         int compliantCount = 0, uncompliantCount = 0;
-        Map<String, Integer> speciesCatchMap = new HashMap<>();
-        Map<String, Integer> seaCompliantMap = new HashMap<>();
-        Map<String, Integer> seaTotalMap = new HashMap<>();
-
+        // 统计各鱼种重量
+        Map<String, Double> speciesWeightMap = new HashMap<>();
+        
         for (FishingLogVO log : logList) {
             if (log.getIsCompliant() == 1) compliantCount++;
             else uncompliantCount++;
-
-            String seaName = log.getSeaName() == null ? "未配置海域" : log.getSeaName();
-            seaTotalMap.put(seaName, seaTotalMap.getOrDefault(seaName, 0) + 1);
-            if (log.getIsCompliant() == 1) {
-                seaCompliantMap.put(seaName, seaCompliantMap.getOrDefault(seaName, 0) + 1);
+            
+            // 从日志ID查询对应的物种信息和重量
+            List<FishingLogSpecies> speciesList = fishingLogSpeciesMapper.selectByLogId(log.getLogId());
+            for (FishingLogSpecies species : speciesList) {
+                Species speciesInfo = speciesMapper.selectById(species.getSpeciesId());
+                String speciesName = speciesInfo != null ? speciesInfo.getSpeciesName() : "未知鱼种";
+                
+                // 解析规格，如果是重量单位则累加
+                double weight = parseWeightFromSpec(species.getCatchSpec());
+                if (weight > 0) {
+                    speciesWeightMap.put(speciesName, speciesWeightMap.getOrDefault(speciesName, 0.0) + weight);
+                }
             }
-
-            String speciesName = "物种-" + log.getLogId();
-            speciesCatchMap.put(speciesName, speciesCatchMap.getOrDefault(speciesName, 0) + 1);
         }
 
+        ChartDataVO vo = new ChartDataVO();
         vo.setCompliantCount(compliantCount);
         vo.setUncompliantCount(uncompliantCount);
 
-        List<ChartDataVO.SpeciesCatchVO> speciesList = new ArrayList<>();
-        speciesCatchMap.forEach((name, value) -> {
+        // 设置鱼种重量数据
+        List<ChartDataVO.SpeciesCatchVO> speciesWeightList = new ArrayList<>();
+        speciesWeightMap.forEach((name, weight) -> {
             ChartDataVO.SpeciesCatchVO s = new ChartDataVO.SpeciesCatchVO();
             s.setName(name);
-            s.setValue(value);
-            speciesList.add(s);
+            s.setValue(weight);
+            speciesWeightList.add(s);
         });
-        vo.setSpeciesCatchData(speciesList);
-
-        List<ChartDataVO.SeaCompliantRateVO> seaList = new ArrayList<>();
-        seaTotalMap.forEach((name, total) -> {
-            ChartDataVO.SeaCompliantRateVO s = new ChartDataVO.SeaCompliantRateVO();
-            s.setName(name);
-            double rate = total == 0 ? 0 : (seaCompliantMap.getOrDefault(name, 0) * 100.0) / total;
-            s.setRate(Math.round(rate * 100) / 100.0);
-            seaList.add(s);
-        });
-        vo.setCompliantRateBySea(seaList);
+        vo.setSpeciesWeightData(speciesWeightList);
 
         return vo;
     }
 
-    // 原有exportReport方法：保留不变
-    @Override
+    /**
+     * 构建日期查询条件
+     * @param timeRange 时间范围：day(今日), week(近一周), month(近一个月), year(近一年)
+     * @return SQL日期条件
+     */
+    private String buildDateCondition(String timeRange) {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate;
+        
+        switch (timeRange) {
+            case "day":
+                startDate = endDate;
+                break;
+            case "week":
+                startDate = endDate.minusWeeks(1);
+                break;
+            case "month":
+                startDate = endDate.minusMonths(1);
+                break;
+            case "year":
+                startDate = endDate.minusYears(1);
+                break;
+            default:
+                startDate = endDate.minusMonths(1); // 默认近一个月
+        }
+        
+        return " AND fishing_date BETWEEN '" + startDate + "' AND '" + endDate + "'";
+    }
+    
+    /**
+     * 从规格字符串中解析重量值（公斤）
+     * @param spec 规格字符串，如"500g", "0.5kg", "1斤"
+     * @return 重量值（公斤）
+     */
+    private double parseWeightFromSpec(String spec) {
+        if (spec == null || spec.trim().isEmpty()) {
+            return 0.0;
+        }
+        
+        // 使用之前添加的单位标准化方法
+        String standardizedSpec = standardizeWeightUnit(spec);
+        
+        // 提取数值部分
+        java.util.regex.Pattern numberPattern = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)");
+        java.util.regex.Matcher numberMatcher = numberPattern.matcher(standardizedSpec);
+        
+        if (numberMatcher.find()) {
+            return Double.parseDouble(numberMatcher.group(1));
+        }
+        
+        return 0.0;
+    }
+
     public void exportReport(Integer userId, HttpServletResponse response) {
-        try {
-            Workbook workbook = new XSSFWorkbook();
-            Sheet sheet = workbook.createSheet("捕捞合规自查报告");
+    try {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("捕捞合规自查报告");
 
-            Row headerRow = sheet.createRow(0);
-            String[] headers = {"日志ID", "捕捞海域", "捕捞日期", "渔具类型", "合规状态", "违规原因"};
-            CellStyle headerStyle = workbook.createCellStyle();
-            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
-            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            for (int i = 0; i < headers.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
-                cell.setCellStyle(headerStyle);
-                sheet.autoSizeColumn(i);
-            }
+        Row headerRow = sheet.createRow(0);
+        String[] headers = {"日志ID", "捕捞海域", "捕捞日期", "渔具类型", "鱼种名称", "捕捞规格", "合规状态", "违规原因"};
+        CellStyle headerStyle = workbook.createCellStyle();
+        headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(headerStyle);
+            sheet.autoSizeColumn(i);
+        }
 
-            List<FishingLogVO> logList = fishingLogMapper.selectLogList(userId, null, null, null, 0, Integer.MAX_VALUE);
-            if (logList == null) {
-                logList = new ArrayList<>();
-            }
-            logList = logList.stream().filter(Objects::nonNull).collect(Collectors.toList());
+        List<FishingLogVO> logList = fishingLogMapper.selectLogList(userId, null, null, null, 0, Integer.MAX_VALUE);
+        if (logList == null) {
+            logList = new ArrayList<>();
+        }
+        logList = logList.stream().filter(Objects::nonNull).collect(Collectors.toList());
 
-            for (int i = 0; i < logList.size(); i++) {
-                FishingLogVO log = logList.get(i);
-                Row row = sheet.createRow(i + 1);
+        int rowIndex = 1;
+        for (FishingLogVO log : logList) {
+            // 查询该日志关联的物种信息
+            List<FishingLogSpecies> speciesList = fishingLogSpeciesMapper.selectByLogId(log.getLogId());
+            
+            if (speciesList != null && !speciesList.isEmpty()) {
+                // 如果有物种信息，为每个物种创建一行
+                for (int j = 0; j < speciesList.size(); j++) {
+                    FishingLogSpecies species = speciesList.get(j);
+                    Species speciesInfo = speciesMapper.selectById(species.getSpeciesId());
+                    
+                    Row row = sheet.createRow(rowIndex++);
+                    row.createCell(0).setCellValue(log.getLogId());
+                    row.createCell(1).setCellValue(log.getSeaName());
+                    row.createCell(2).setCellValue(log.getFishingDate().toString());
+                    row.createCell(3).setCellValue(log.getFishingGear());
+                    row.createCell(4).setCellValue(speciesInfo != null ? speciesInfo.getSpeciesName() : "未知鱼种");
+                    row.createCell(5).setCellValue(species.getCatchSpec() != null ? species.getCatchSpec() : "");
+                    row.createCell(6).setCellValue(log.getIsCompliant() == 1 ? "合规" : "违规");
+                    row.createCell(7).setCellValue(log.getUncompliantReason() == null ? "无" : log.getUncompliantReason());
+                }
+            } else {
+                // 如果没有物种信息，创建一行空的物种信息
+                Row row = sheet.createRow(rowIndex++);
                 row.createCell(0).setCellValue(log.getLogId());
                 row.createCell(1).setCellValue(log.getSeaName());
                 row.createCell(2).setCellValue(log.getFishingDate().toString());
                 row.createCell(3).setCellValue(log.getFishingGear());
-                row.createCell(4).setCellValue(log.getIsCompliant() == 1 ? "合规" : "违规");
-                row.createCell(5).setCellValue(log.getUncompliantReason() == null ? "无" : log.getUncompliantReason());
+                row.createCell(4).setCellValue(""); // 鱼种名称为空
+                row.createCell(5).setCellValue(""); // 捕捞规格为空
+                row.createCell(6).setCellValue(log.getIsCompliant() == 1 ? "合规" : "违规");
+                row.createCell(7).setCellValue(log.getUncompliantReason() == null ? "无" : log.getUncompliantReason());
             }
-
-            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            String fileName = URLEncoder.encode("捕捞合规自查报告_" + LocalDateTime.now().toString().replace(":", "-") + ".xlsx", "UTF-8");
-            response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
-
-            OutputStream os = response.getOutputStream();
-            workbook.write(os);
-            os.flush();
-            os.close();
-            workbook.close();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-    }
 
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        String fileName = URLEncoder.encode("捕捞合规自查报告_" + LocalDateTime.now().toString().replace(":", "-") + ".xlsx", "UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=" + fileName);
+
+        OutputStream os = response.getOutputStream();
+        workbook.write(os);
+        os.flush();
+        os.close();
+        workbook.close();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
     // 新增：删除日志（无需依赖任何其他Mapper）
     @Override
     @Transactional // 事务保证：删明细和主表要么都成功，要么都回滚

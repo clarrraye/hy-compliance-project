@@ -56,4 +56,11 @@ public interface FishingLogMapper {
                                        @Param("fishingDate") String fishingDate,
                                        @Param("seaId") Integer seaId,
                                        @Param("isCompliant") Integer isCompliant);
+    
+
+        // 根据时间范围查询日志列表
+    List<FishingLogVO> selectLogListWithDateCondition(@Param("userId") Integer userId, 
+                                                     @Param("dateCondition") String dateCondition,
+                                                     @Param("offset") Integer offset, 
+                                                     @Param("limit") Integer limit);
 }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.example.hy_backend.entity.FishingLogSpecies;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 public interface FishingLogSpeciesMapper extends BaseMapper<FishingLogSpecies> {
@@ -16,4 +17,8 @@ public interface FishingLogSpeciesMapper extends BaseMapper<FishingLogSpecies> {
             "</foreach>" +
             "</script>")
     void batchInsert(@Param("list") List<FishingLogSpecies> list);
+
+    // 根据日志ID查询物种明细
+    @Select("SELECT * FROM fishing_log_species WHERE log_id = #{logId}")
+    List<FishingLogSpecies> selectByLogId(@Param("logId") Long logId);
 }

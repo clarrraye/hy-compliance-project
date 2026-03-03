@@ -189,11 +189,11 @@
                 />
               </template>
             </el-table-column>
-            <el-table-column label="捕捞规格" width="120">
+              <el-table-column label="捕捞规格" width="120">
               <template #default="scope">
                 <el-input
                   v-model="scope.row.catchSpec"
-                  placeholder="如：15cm/500g（选填）"
+                  placeholder="如：15kg（选填）"
                 />
               </template>
             </el-table-column>
@@ -227,7 +227,7 @@
       </template>
     </el-dialog>
 
-    <!-- 数据可视化弹窗：无日志时隐藏 -->
+        <!-- 数据可视化弹窗：无日志时隐藏 -->
     <el-dialog
       v-model="showChartDialog"
       title="合规数据可视化"
@@ -236,23 +236,27 @@
       draggable
     >
       <div class="chart-container">
+        <!-- 时间筛选器 -->
+        <div class="time-filter" style="margin-bottom: 20px;">
+          <el-radio-group v-model="timeRange" @change="openChartDialog">
+            <el-radio-button label="day">今日</el-radio-button>
+            <el-radio-button label="week">近一周</el-radio-button>
+            <el-radio-button label="month">近一个月</el-radio-button>
+            <el-radio-button label="year">近一年</el-radio-button>
+          </el-radio-group>
+        </div>
+        
         <el-row :gutter="20">
           <el-col :span="12">
             <div class="chart-card">
-              <h3>合规/违规数量统计</h3>
+              <h3>合规情况</h3>
               <div id="compliancePie" style="width: 100%; height: 300px"></div>
             </div>
           </el-col>
           <el-col :span="12">
             <div class="chart-card">
-              <h3>各海域合规率</h3>
-              <div id="seaRateBar" style="width: 100%; height: 300px"></div>
-            </div>
-          </el-col>
-          <el-col :span="24">
-            <div class="chart-card">
-              <h3>物种捕捞数量统计</h3>
-              <div id="speciesCatchLine" style="width: 100%; height: 300px"></div>
+              <h3>各捕捞鱼种重量 (kg)</h3>
+              <div id="speciesWeightBar" style="width: 100%; height: 300px"></div>
             </div>
           </el-col>
         </el-row>
@@ -280,10 +284,12 @@ const logList = ref([])
 const seaList = ref([])
 const speciesAllList = ref([])
 
+// 时间筛选
+const timeRange = ref('month')  // 默认为近一个月
+
 // ECharts实例：防止内存泄漏
 let compliancePieChart = null
-let seaRateBarChart = null
-let speciesCatchLineChart = null
+let speciesWeightBarChart = null  // 替换原来的多个图表实例
 
 // 查询表单
 const searchForm = reactive({
@@ -327,8 +333,7 @@ onMounted(async () => {
 // 页面销毁
 onBeforeUnmount(() => {
   if (compliancePieChart) compliancePieChart.dispose()
-  if (seaRateBarChart) seaRateBarChart.dispose()
-  if (speciesCatchLineChart) speciesCatchLineChart.dispose()
+  if (speciesWeightBarChart) speciesWeightBarChart.dispose()
   window.removeEventListener('resize', resizeCharts)
 })
 
@@ -574,17 +579,14 @@ const exportReport = async () => {
 // ECharts自适应
 const resizeCharts = () => {
   if (compliancePieChart) compliancePieChart.resize()
-  if (seaRateBarChart) seaRateBarChart.resize()
-  if (speciesCatchLineChart) speciesCatchLineChart.resize()
+  if (speciesWeightBarChart) speciesWeightBarChart.resize()
 }
 
-// 初始化ECharts图表
-// 初始化ECharts图表（修复：增加空数据提示+实例唯一+适配无数据场景）
+// 初始化ECharts图表（只包含合规饼图和鱼种重量柱状图）
 const initCharts = (chartData) => {
   // 先销毁旧实例，避免重复创建导致的图表异常
   if (compliancePieChart) compliancePieChart.dispose()
-  if (seaRateBarChart) seaRateBarChart.dispose()
-  if (speciesCatchLineChart) speciesCatchLineChart.dispose()
+  if (speciesWeightBarChart) speciesWeightBarChart.dispose()
 
   // 1. 合规/违规饼图（增加无数据提示）
   compliancePieChart = echarts.init(document.getElementById('compliancePie'))
@@ -606,51 +608,38 @@ const initCharts = (chartData) => {
   }
   compliancePieChart.setOption(pieOption)
 
-  // 2. 各海域合规率柱状图（增加无数据提示）
-  seaRateBarChart = echarts.init(document.getElementById('seaRateBar'))
+  // 2. 各捕捞鱼种重量柱状图（增加无数据提示）
+  speciesWeightBarChart = echarts.init(document.getElementById('speciesWeightBar'))
   const barOption = {
     color: ['#409eff'],
-    tooltip: { trigger: 'axis', formatter: '{b}：{c}%' },
-    title: { text: chartData?.barXData?.length ? '' : '暂无海域统计数据', left: 'center', top: '45%', textStyle: { color: '#999' } },
-    xAxis: { type: 'category', data: chartData?.barXData || [], show: chartData?.barXData?.length },
-    yAxis: { type: 'value', max: 100, min: 0, name: '合规率(%)', show: chartData?.barXData?.length },
+    tooltip: { trigger: 'axis', formatter: '{b}<br/>{a}: {c} kg' },
+    title: { text: chartData?.barXData?.length ? '' : '暂无鱼种重量统计数据', left: 'center', top: '45%', textStyle: { color: '#999' } },
+    grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+    xAxis: { 
+      type: 'category', 
+      data: chartData?.barXData || [], 
+      show: chartData?.barXData?.length,
+      axisLabel: { rotate: 45 }  // 旋转标签以适应较长的鱼种名称
+    },
+    yAxis: { 
+      type: 'value', 
+      name: '重量(kg)',
+      show: chartData?.barXData?.length 
+    },
     series: [{ 
-      name: '合规率', 
+      name: '鱼种重量', 
       type: 'bar', 
       data: chartData?.barYData || [], 
-      barWidth: '40%',
+      barWidth: '60%',
       silent: !chartData?.barXData?.length
     }]
   }
-  seaRateBarChart.setOption(barOption)
-
-  // 3. 物种捕捞数量折线图（增加无数据提示）
-  speciesCatchLineChart = echarts.init(document.getElementById('speciesCatchLine'))
-  const lineOption = {
-    color: ['#67c23a'],
-    tooltip: { trigger: 'axis', formatter: '{b}：{c} kg' },
-    legend: { data: ['捕捞数量'], right: 10, show: chartData?.lineXData?.length },
-    title: { text: chartData?.lineXData?.length ? '' : '暂无物种捕捞统计数据', left: 'center', top: '45%', textStyle: { color: '#999' } },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: { type: 'category', boundaryGap: false, data: chartData?.lineXData || [], show: chartData?.lineXData?.length },
-    yAxis: { type: 'value', name: '捕捞数量(kg)', show: chartData?.lineXData?.length },
-    series: [{
-      name: '捕捞数量',
-      type: 'line',
-      smooth: true,
-      data: chartData?.lineYData || [],
-      lineStyle: { width: 2 },
-      itemStyle: { radius: 4 },
-      silent: !chartData?.lineXData?.length
-    }]
-  }
-  speciesCatchLineChart.setOption(lineOption)
+  speciesWeightBarChart.setOption(barOption)
 
   // 重新绑定自适应事件
   window.addEventListener('resize', resizeCharts)
 }
 
-// 打开可视化弹窗
 // 打开可视化弹窗（核心修复：格式转换，对接后端ChartDataVO格式）
 const openChartDialog = async () => {
   const userId = sessionStorage.getItem('loginUserId')
@@ -660,8 +649,8 @@ const openChartDialog = async () => {
   }
   try {
     loading.value = true
-    // 调用后端接口（原有代码保留）
-    const res = await fishingLogApi.getChartData({ userId, timeRange: 'month' })
+    // 调用后端接口，传递时间范围参数
+    const res = await fishingLogApi.getChartData({ userId, timeRange: timeRange.value })
     console.log('后端可视化原始数据：', res) // 打印原始数据，方便排查
     // 兼容后端统一返回格式（code=200取data）
     const chartData = res?.code === 200 ? (res.data || {}) : (res || {})
@@ -677,16 +666,13 @@ const openChartDialog = async () => {
         { name: '合规', value: chartData.compliantCount || 0 },
         { name: '违规', value: chartData.uncompliantCount || 0 }
       ],
-      // 2. 柱状图数据（海域合规率）：barXData=海域名，barYData=合规率
-      barXData: (chartData.compliantRateBySea || []).map(item => item.name || '未配置海域'),
-      barYData: (chartData.compliantRateBySea || []).map(item => item.rate || 0),
-      // 3. 折线图数据（物种捕捞量）：lineXData=物种名，lineYData=捕捞量
-      lineXData: (chartData.speciesCatchData || []).map(item => item.name || '未知物种'),
-      lineYData: (chartData.speciesCatchData || []).map(item => item.value || 0)
+      // 2. 柱状图数据（鱼种重量）：barXData=鱼种名，barYData=重量
+      barXData: (chartData.speciesWeightData || []).map(item => item.name || '未知鱼种'),
+      barYData: (chartData.speciesWeightData || []).map(item => item.value || 0)
     }
     console.log('转换后ECharts数据：', finalEchartsData) // 打印转换后数据
 
-    // 传入转换后的数据初始化图表（原有initCharts保留，无需改）
+    // 传入转换后的数据初始化图表
     initCharts(finalEchartsData)
   } catch (error) {
     console.error('可视化接口调用失败：', error)
@@ -695,9 +681,7 @@ const openChartDialog = async () => {
     initCharts({
       pieData: [],
       barXData: [],
-      barYData: [],
-      lineXData: [],
-      lineYData: []
+      barYData: []
     })
   } finally {
     loading.value = false
