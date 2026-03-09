@@ -1,10 +1,19 @@
 <template>
   <div class="compliance-query-page">
-    <!-- 页面标题：海洋蓝+加粗 -->
-    <div class="page-title">海渔合规基础查询</div>
+    <!-- 顶部标题横幅 -->
+    <div class="page-banner">
+      <div class="banner-content">
+        <div class="banner-icon">🛡️</div>
+        <div>
+          <h1 class="banner-title">基础合规查询</h1>
+          <p class="banner-sub">海域禁渔规则 · 渔业政策 · 渔具合规</p>
+        </div>
+      </div>
+      <canvas ref="bannerCanvas" class="banner-wave"></canvas>
+    </div>
 
-    <!-- 选项卡：海洋主题卡片样式 -->
-    <el-tabs v-model="activeTab" type="card" class="query-tabs" style="margin: 20px 0;">
+    <!-- 选项卡 -->
+    <el-tabs v-model="activeTab" class="ocean-tabs">
       <el-tab-pane label="禁渔规则查询" name="banRule">
         <!-- 禁渔规则查询：3大条件（海域+时间+鱼种） -->
         <el-card shadow="hover" class="query-card">
@@ -71,6 +80,20 @@
             <el-table-column prop="banEndTime" label="禁渔结束时间" align="center" />
             <el-table-column prop="specRequire" label="规格要求" align="center" />
             <el-table-column prop="punishDesc" label="违规处罚" align="center" />
+            <template #empty>
+              <div class="table-empty">
+                <svg width="80" height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8,55 Q20,47 32,55 Q44,63 56,55 Q68,47 75,51" stroke="rgba(0,212,255,0.35)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                  <path d="M5,63 Q18,56 30,63 Q42,70 54,63 Q66,56 74,60" stroke="rgba(0,212,255,0.2)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                  <ellipse cx="42" cy="32" rx="16" ry="9" fill="rgba(0,130,180,0.45)" stroke="rgba(0,212,255,0.5)" stroke-width="1"/>
+                  <path d="M58,32 L66,24 L66,40 Z" fill="rgba(0,130,180,0.45)" stroke="rgba(0,212,255,0.5)" stroke-width="1"/>
+                  <circle cx="32" cy="29" r="2" fill="rgba(0,212,255,0.7)"/>
+                  <circle cx="27" cy="19" r="1.8" stroke="rgba(0,212,255,0.35)" stroke-width="1" fill="none"/>
+                  <circle cx="22" cy="13" r="1.3" stroke="rgba(0,212,255,0.25)" stroke-width="1" fill="none"/>
+                </svg>
+                <p>暂无查询结果，请选择查询条件</p>
+              </div>
+            </template>
           </el-table>
         </el-card>
       </el-tab-pane>
@@ -93,44 +116,42 @@
             </el-form-item>
           </el-form>
 
-          <!-- 政策查询结果（优化：悬浮显示全文） -->
-          <el-table :data="policyList" border style="margin-top: 20px;" stripe v-loading="policyLoading" class="result-table">
-            <el-table-column prop="policyTitle" label="政策标题" align="center" />
-            <el-table-column prop="publishUnit" label="发布单位" align="center" width="150" />
-            <el-table-column prop="publishTime" label="发布时间" align="center" width="180">
-              <template #default="scope">
-                {{ scope.row.publishTime ? scope.row.publishTime.substring(0,10) : '' }}
-              </template>
-            </el-table-column>
-            <!-- 官方条文列：悬浮显示全文 -->
-            <el-table-column label="官方条文" align="center">
-              <template #default="scope">
-                <el-tooltip
-                  class="item"
-                  effect="light"
-                  :content="scope.row.officialContent || '无'"
-                  placement="top"
-                  :disabled="!scope.row.officialContent || scope.row.officialContent.length < 10"
-                >
-                  <div class="text-overflow">{{ scope.row.officialContent || '无' }}</div>
-                </el-tooltip>
-              </template>
-            </el-table-column>
-            <!-- 口语化解读列：悬浮显示全文 -->
-            <el-table-column label="口语化解读" align="center">
-              <template #default="scope">
-                <el-tooltip
-                  class="item"
-                  effect="light"
-                  :content="scope.row.simpleContent || '无'"
-                  placement="top"
-                  :disabled="!scope.row.simpleContent || scope.row.simpleContent.length < 10"
-                >
-                  <div class="text-overflow">{{ scope.row.simpleContent || '无' }}</div>
-                </el-tooltip>
-              </template>
-            </el-table-column>
-          </el-table>
+          <!-- 政策查询结果：卡片瀑布流 -->
+          <div v-loading="policyLoading" class="policy-grid">
+            <template v-if="!policyLoading && policyList.length === 0">
+              <div class="policy-empty">
+                <svg width="80" height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8,55 Q20,47 32,55 Q44,63 56,55 Q68,47 75,51" stroke="rgba(0,212,255,0.35)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                  <path d="M5,63 Q18,56 30,63 Q42,70 54,63 Q66,56 74,60" stroke="rgba(0,212,255,0.2)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                  <ellipse cx="42" cy="32" rx="16" ry="9" fill="rgba(0,130,180,0.45)" stroke="rgba(0,212,255,0.5)" stroke-width="1"/>
+                  <path d="M58,32 L66,24 L66,40 Z" fill="rgba(0,130,180,0.45)" stroke="rgba(0,212,255,0.5)" stroke-width="1"/>
+                  <circle cx="32" cy="29" r="2" fill="rgba(0,212,255,0.7)"/>
+                  <circle cx="27" cy="19" r="1.8" stroke="rgba(0,212,255,0.35)" stroke-width="1" fill="none"/>
+                  <circle cx="22" cy="13" r="1.3" stroke="rgba(0,212,255,0.25)" stroke-width="1" fill="none"/>
+                </svg>
+                <p>暂无政策数据，请输入关键词搜索</p>
+              </div>
+            </template>
+            <div v-for="(item, idx) in policyList" :key="idx" class="policy-card">
+              <div class="policy-card-header">
+                <span class="policy-title">{{ item.policyTitle }}</span>
+              </div>
+              <div class="policy-card-meta">
+                <span class="policy-meta-tag">{{ item.publishUnit }}</span>
+                <span class="policy-meta-tag">{{ item.publishTime ? item.publishTime.substring(0,10) : '未知日期' }}</span>
+              </div>
+              <div class="policy-card-body">
+                <div class="policy-section">
+                  <span class="policy-label">官方条文</span>
+                  <p class="policy-content">{{ item.officialContent || '无' }}</p>
+                </div>
+                <div class="policy-section">
+                  <span class="policy-label">口语化解读</span>
+                  <p class="policy-content">{{ item.simpleContent || '无' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </el-card>
       </el-tab-pane>
 
@@ -141,13 +162,29 @@
             <el-table-column prop="gearName" label="渔具名称" align="center" width="150" />
             <el-table-column label="是否允许" align="center" width="120">
               <template #default="scope">
-                <el-tag :type="scope.row.isAllow === 1 ? 'success' : 'danger'" class="status-tag">
-                  {{ scope.row.isAllow === 1 ? '允许' : '禁用' }}
+                <el-tag
+                  :type="scope.row.isAllow === 1 ? 'success' : 'danger'"
+                  :class="scope.row.isAllow === 1 ? 'glow-tag glow-tag--success' : 'glow-tag glow-tag--danger'">
+                  {{ scope.row.isAllow === 1 ? '✓ 允许' : '✗ 禁用' }}
                 </el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注/规格要求" align="center" show-overflow-tooltip />
             <el-table-column prop="punishDesc" label="违规处罚" align="center" show-overflow-tooltip />
+            <template #empty>
+              <div class="table-empty">
+                <svg width="80" height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8,55 Q20,47 32,55 Q44,63 56,55 Q68,47 75,51" stroke="rgba(0,212,255,0.35)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                  <path d="M5,63 Q18,56 30,63 Q42,70 54,63 Q66,56 74,60" stroke="rgba(0,212,255,0.2)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                  <ellipse cx="42" cy="32" rx="16" ry="9" fill="rgba(0,130,180,0.45)" stroke="rgba(0,212,255,0.5)" stroke-width="1"/>
+                  <path d="M58,32 L66,24 L66,40 Z" fill="rgba(0,130,180,0.45)" stroke="rgba(0,212,255,0.5)" stroke-width="1"/>
+                  <circle cx="32" cy="29" r="2" fill="rgba(0,212,255,0.7)"/>
+                  <circle cx="27" cy="19" r="1.8" stroke="rgba(0,212,255,0.35)" stroke-width="1" fill="none"/>
+                  <circle cx="22" cy="13" r="1.3" stroke="rgba(0,212,255,0.25)" stroke-width="1" fill="none"/>
+                </svg>
+                <p>暂无渔具数据</p>
+              </div>
+            </template>
           </el-table>
         </el-card>
       </el-tab-pane>
@@ -156,9 +193,50 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { ElMessage, ElTag } from 'element-plus'
 import complianceApi from '@/api/compliance'
+
+// ===== Banner Canvas 海浪 =====
+const bannerCanvas = ref(null)
+let bannerAnimId = null
+const bannerWaves = [
+  { color: 'rgba(0,212,255,0.3)', amplitude: 10, frequency: 0.015, speed: 0.5,  offset: 0   },
+  { color: 'rgba(0,150,200,0.2)', amplitude: 7,  frequency: 0.022, speed: -0.35, offset: 2.5 },
+]
+function drawBannerWave() {
+  const canvas = bannerCanvas.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  const W = canvas.width
+  const H = canvas.height
+  const t = performance.now() / 1000
+  ctx.clearRect(0, 0, W, H)
+  ;[...bannerWaves].reverse().forEach(wave => {
+    const yBase = H * 0.42
+    ctx.beginPath()
+    ctx.moveTo(0, H)
+    for (let x = 0; x <= W; x += 3) {
+      const y = yBase +
+        Math.sin(x * wave.frequency + t * wave.speed + wave.offset) * wave.amplitude +
+        Math.sin(x * wave.frequency * 1.8 + t * wave.speed * 0.5 + wave.offset * 1.4) * (wave.amplitude * 0.4)
+      ctx.lineTo(x, y)
+    }
+    ctx.lineTo(W, H)
+    ctx.closePath()
+    ctx.fillStyle = wave.color
+    ctx.fill()
+  })
+  bannerAnimId = requestAnimationFrame(drawBannerWave)
+}
+function initBannerCanvas() {
+  const canvas = bannerCanvas.value
+  if (!canvas) return
+  canvas.width = canvas.parentElement.offsetWidth
+  canvas.height = 70
+  cancelAnimationFrame(bannerAnimId)
+  drawBannerWave()
+}
 
 // 选项卡激活项
 const activeTab = ref('banRule')
@@ -210,6 +288,13 @@ const filteredSpeciesList = computed(() => {
 onMounted(() => {
   loadSeaAndSpecies()
   loadFishingGear()
+  initBannerCanvas()
+  window.addEventListener('resize', initBannerCanvas)
+})
+
+onBeforeUnmount(() => {
+  cancelAnimationFrame(bannerAnimId)
+  window.removeEventListener('resize', initBannerCanvas)
 })
 
 // 海域/鱼种加载
@@ -300,133 +385,352 @@ const searchPolicy = async () => {
 </script>
 
 <style scoped>
+/* ===== 页面容器 ===== */
 .compliance-query-page {
-  padding: 30px 40px;
-  box-sizing: border-box;
   min-height: calc(100vh - 64px);
-  background: linear-gradient(180deg, #e6f7ff, #f0f8ff);
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
-/* 页面标题 */
-.page-title {
-  font-size: 22px;
-  font-weight: bold;
-  color: #0066cc;
-  margin-bottom: 24px;
-  letter-spacing: 1px;
+
+/* ===== 顶部横幅 ===== */
+.page-banner {
+  position: relative;
+  padding: 36px 60px 72px;
+  background: linear-gradient(135deg, rgba(0,30,80,0.92) 0%, rgba(0,55,110,0.85) 50%, rgba(0,25,70,0.92) 100%);
+  overflow: hidden;
 }
-/* 选项卡样式优化 */
-:deep(.query-tabs) {
-  --el-tabs-card-border-color: rgba(64, 158, 255, 0.2);
-  --el-tabs-active-color: #0066cc;
+
+.page-banner::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -10%;
+  width: 120%;
+  height: 180%;
+  background: radial-gradient(ellipse at 40% 50%, rgba(0,212,255,0.1) 0%, transparent 65%);
+  pointer-events: none;
 }
-:deep(.el-tabs__item) {
-  font-size: 14px;
-  padding: 8px 20px;
+
+.banner-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.banner-icon {
+  font-size: 40px;
+  line-height: 1;
+  animation: banner-float 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 14px rgba(0,212,255,0.7));
+  flex-shrink: 0;
+}
+
+@keyframes banner-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-7px); }
+}
+
+.banner-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  margin: 0;
+  background: linear-gradient(90deg, #66e8ff, #00d4ff 40%, #aaf4ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 10px rgba(0,212,255,0.5));
+}
+
+.banner-sub {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: rgba(176,216,240,0.65);
+  letter-spacing: 2px;
+}
+
+.banner-wave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 70px;
+  z-index: 1;
+  display: block;
+}
+
+/* ===== Tabs ===== */
+.ocean-tabs {
+  padding: 20px 40px 24px;
+}
+
+:deep(.ocean-tabs .el-tabs__nav-wrap::after) {
+  background-color: rgba(0,212,255,0.15) !important;
+  height: 1px;
+}
+
+:deep(.ocean-tabs .el-tabs__item) {
+  color: #7ab8d8 !important;
+  font-size: 15px;
+  padding: 0 28px;
+  height: 44px;
+  line-height: 44px;
   transition: all 0.3s ease;
 }
-:deep(.el-tabs__item.is-active) {
-  background: linear-gradient(90deg, #0066cc, #409eff);
-  color: #fff !important;
-  border: none !important;
+
+:deep(.ocean-tabs .el-tabs__item:hover) {
+  color: #00d4ff !important;
+  text-shadow: 0 0 8px rgba(0,212,255,0.4);
 }
-/* 查询卡片：磨砂玻璃+圆角 */
+
+:deep(.ocean-tabs .el-tabs__item.is-active) {
+  color: #00d4ff !important;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(0,212,255,0.6);
+}
+
+:deep(.ocean-tabs .el-tabs__active-bar) {
+  background: linear-gradient(90deg, transparent, #00d4ff, transparent) !important;
+  box-shadow: 0 0 10px rgba(0,212,255,0.9), 0 0 20px rgba(0,212,255,0.4) !important;
+  height: 3px !important;
+  border-radius: 2px !important;
+  transition: width 0.3s ease, transform 0.3s ease !important;
+}
+
+/* ===== 查询卡片 ===== */
 .query-card {
-  --el-card-border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(64, 158, 255, 0.1);
-  box-shadow: 0 4px 16px rgba(64, 158, 255, 0.08);
+  --el-card-bg-color: rgba(0,15,45,0.82) !important;
+  background: rgba(0,15,45,0.82) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(0,212,255,0.2) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(0,212,255,0.08) !important;
 }
-/* 查询表单 */
+
+:deep(.query-card .el-card__body) {
+  background: rgba(0,15,45,0.82) !important;
+  padding: 24px !important;
+}
+
+/* ===== 查询表单 ===== */
 .query-form {
-  margin-bottom: 16px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(0,212,255,0.12);
+  margin-bottom: 20px;
 }
-.form-item {
-  margin-right: 24px !important;
-  margin-bottom: 16px !important;
+
+:deep(.query-form .el-form-item) {
+  margin-right: 20px !important;
+  margin-bottom: 8px !important;
 }
-:deep(.form-item .el-form-item__label) {
-  color: #0052aa;
+
+:deep(.query-form .el-form-item__label) {
+  color: #7ab8d8 !important;
   font-size: 14px;
-  font-weight: 500;
 }
-/* 选择器/输入框样式 */
-.query-select, .query-input {
-  --el-input-border-radius: 8px;
-  --el-input-border-color: #cce5ff;
-  --el-input-focus-border-color: #409eff;
-}
-/* 按钮样式：海洋渐变 */
-.query-btn {
-  background: linear-gradient(90deg, #0066cc, #409eff);
-  border: none;
-  border-radius: 8px;
-  padding: 8px 24px;
-  transition: all 0.3s ease;
-}
-.query-btn:hover {
-  background: linear-gradient(90deg, #0052aa, #3393ee);
-  transform: scale(1.05);
-}
-.reset-btn {
-  border-radius: 8px;
-  padding: 8px 24px;
-  border: 1px solid #cce5ff;
-  color: #0066cc;
-  transition: all 0.3s ease;
-}
-.reset-btn:hover {
-  background: #e6f7ff;
-  border-color: #409eff;
-}
-/* 结果表格样式 */
+
+/* ===== 结果表格 ===== */
 .result-table {
-  --el-table-border-radius: 8px;
-  --el-table-header-text-color: #0052aa;
-  --el-table-row-hover-bg-color: #e6f7ff;
-  --el-table-stripe-bg-color: #f8fcff;
-  font-size: 14px;
+  border-radius: 8px;
+  overflow: hidden;
 }
-:deep(.el-table__header) {
-  background: rgba(64, 158, 255, 0.05);
+
+:deep(.result-table .el-table__row:nth-child(odd) td.el-table__cell) {
+  background: rgba(0,20,55,0.5) !important;
+  color: #b0d8f0 !important;
 }
-/* 文字溢出省略（关键） */
+
+:deep(.result-table .el-table__row:nth-child(even) td.el-table__cell) {
+  background: rgba(0,35,75,0.4) !important;
+  color: #b0d8f0 !important;
+}
+
+/* EP 通过 .hover-row class 控制 hover 背景，而非 :hover 伪类 */
+:deep(.result-table .el-table__body tr.hover-row > td.el-table__cell) {
+  background: rgba(0,160,220,0.18) !important;
+  color: #00d4ff !important;
+}
+
+:deep(.result-table .el-table__body tr.hover-row > td.el-table__cell:first-child) {
+  box-shadow: inset 3px 0 0 #00d4ff !important;
+}
+
+/* ===== 表格空数据状态 ===== */
+.table-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+.table-empty p {
+  margin-top: 14px;
+  font-size: 13px;
+  color: rgba(122,184,216,0.65);
+  letter-spacing: 1px;
+}
+
+/* ===== 发光状态标签 ===== */
+.glow-tag {
+  border-radius: 5px !important;
+  padding: 3px 10px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px;
+  transition: box-shadow 0.3s ease;
+}
+
+.glow-tag--success {
+  background: rgba(0,212,170,0.15) !important;
+  border-color: rgba(0,212,170,0.55) !important;
+  color: #00e6bb !important;
+  box-shadow: 0 0 8px rgba(0,212,170,0.45), inset 0 0 6px rgba(0,212,170,0.08) !important;
+}
+
+.glow-tag--success:hover {
+  box-shadow: 0 0 16px rgba(0,212,170,0.7) !important;
+}
+
+.glow-tag--danger {
+  background: rgba(255,80,80,0.15) !important;
+  border-color: rgba(255,80,80,0.55) !important;
+  color: #ff7070 !important;
+  box-shadow: 0 0 8px rgba(255,80,80,0.45), inset 0 0 6px rgba(255,80,80,0.08) !important;
+}
+
+.glow-tag--danger:hover {
+  box-shadow: 0 0 16px rgba(255,80,80,0.7) !important;
+}
+
+/* ===== 文字溢出省略 ===== */
 .text-overflow {
   width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 0 4px;
-  cursor: help; /* 鼠标悬浮显示帮助光标，提示可查看全文 */
+  cursor: help;
 }
-/* 优化tooltip样式，贴合海洋主题 */
-:deep(.el-tooltip__popper) {
-  --el-tooltip-bg-color: rgba(255, 255, 255, 0.95);
-  --el-tooltip-text-color: #0066cc;
-  --el-tooltip-border-color: rgba(64, 158, 255, 0.2);
-  backdrop-filter: blur(8px);
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(64, 158, 255, 0.15);
-  max-width: 500px; /* 限制tooltip最大宽度，避免内容过宽 */
-  padding: 8px 12px;
-  font-size: 14px;
+
+/* ===== 政策卡片瀑布流 ===== */
+.policy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+  min-height: 200px;
+}
+
+.policy-card {
+  background: rgba(0,22,58,0.75);
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  backdrop-filter: blur(10px);
+}
+
+.policy-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.policy-card-header {
+  margin-bottom: 10px;
+}
+
+.policy-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #00d4ff;
+  text-shadow: 0 0 8px rgba(0,212,255,0.3);
   line-height: 1.5;
+  display: block;
 }
-/* 状态标签优化 */
-.status-tag {
+
+.policy-card-meta {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.policy-meta-tag {
+  background: rgba(0,212,255,0.08);
+  border: 1px solid rgba(0,212,255,0.2);
   border-radius: 4px;
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: 11px;
+  color: #7ab8d8;
 }
-/* 加载样式优化 */
-:deep(.el-loading-mask) {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(5px);
+
+.policy-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-:deep(.el-loading-spinner__path) {
-  stroke: #409eff;
+
+.policy-section {
+  border-left: 2px solid rgba(0,212,255,0.3);
+  padding-left: 12px;
+}
+
+.policy-section:last-child {
+  border-left-color: rgba(0,180,130,0.45);
+}
+
+.policy-label {
+  display: inline-block;
+  font-size: 11px;
+  color: #00d4ff;
+  background: rgba(0,212,255,0.1);
+  border-radius: 3px;
+  padding: 1px 6px;
+  margin-bottom: 5px;
+  letter-spacing: 0.5px;
+}
+
+.policy-section:last-child .policy-label {
+  color: #00d4aa;
+  background: rgba(0,212,170,0.1);
+}
+
+.policy-content {
+  font-size: 13px;
+  color: #b0d8f0;
+  line-height: 1.65;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+.policy-section:last-child .policy-content {
+  color: #a0e8d0;
+}
+
+.policy-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 50px 20px;
+}
+
+.policy-empty p {
+  margin-top: 16px;
+  font-size: 13px;
+  color: rgba(122,184,216,0.65);
+  letter-spacing: 1px;
 }
 </style>

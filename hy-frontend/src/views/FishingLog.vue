@@ -4,9 +4,9 @@
     <div class="log-header">
       <div class="header-left">海渔合规管理平台 - 捕捞日志与合规自查</div>
       <div class="header-right">
-        <el-button type="primary" icon="Plus" @click="showAddDialog = true">新增捕捞日志</el-button>
-        <el-button type="success" icon="Download" @click="exportReport" :disabled="!logList.length">导出自查报告</el-button>
-        <el-button type="info" icon="PieChart" @click="showChartDialog = true" :disabled="!logList.length">合规数据可视化</el-button>
+        <el-button class="btn-add" icon="Plus" @click="showAddDialog = true">新增捕捞日志</el-button>
+        <el-button class="btn-export" icon="Download" @click="exportReport" :disabled="!logList.length">导出自查报告</el-button>
+        <el-button class="btn-chart" icon="PieChart" @click="showChartDialog = true" :disabled="!logList.length">合规数据可视化</el-button>
       </div>
     </div>
 
@@ -59,7 +59,14 @@
           highlight-current-row
           empty-text="暂无捕捞日志，点击右上角「新增捕捞日志」创建第一条日志吧！"
         >
-          <el-table-column prop="logId" label="日志ID" width="80" align="center" />
+          <el-table-column prop="logId" label="日志编号" width="95" align="center">
+            <template #default="scope">
+              <span class="log-id-cell">
+                <span class="log-id-icon">🌊</span>
+                <span>#{{ scope.row.logId }}</span>
+              </span>
+            </template>
+          </el-table-column>
           <el-table-column prop="seaName" label="捕捞海域" width="150" align="center" />
           <el-table-column prop="fishingDate" label="捕捞日期" width="120" align="center" />
           <el-table-column prop="fishingGear" label="渔具类型" width="120" align="center" />
@@ -70,9 +77,12 @@
             align="center"
           >
             <template #default="scope">
-              <el-tag :type="scope.row?.isCompliant === 1 ? 'success' : 'danger'">
-                {{ scope.row?.isCompliant === 1 ? '合规' : '违规' }}
-              </el-tag>
+              <div class="status-cell">
+                <span :class="scope.row?.isCompliant === 1 ? 'status-dot status-dot--success' : 'status-dot status-dot--danger'"></span>
+                <span :class="scope.row?.isCompliant === 1 ? 'status-text--success' : 'status-text--danger'">
+                  {{ scope.row?.isCompliant === 1 ? '合规' : '违规' }}
+                </span>
+              </div>
             </template>
           </el-table-column>
           <el-table-column prop="uncompliantReason" label="违规原因" min-width="200" />
@@ -82,11 +92,12 @@
               {{ scope.row.createTime ? new Date(scope.row.createTime).toLocaleString() : '-' }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" align="center">
+          <el-table-column label="操作" width="90" align="center">
             <template #default="scope">
-              <el-button type="text" icon="Edit" @click="viewLog(scope.row)">查看详情</el-button>
-              <!-- 新增：删除按钮 -->
-              <el-button type="text" icon="Delete" style="color: #f56c6c" @click="deleteLog(scope.row.logId)">删除</el-button>
+              <div class="action-btns">
+                <el-button class="icon-btn view-btn" icon="Search" @click="viewLog(scope.row)" title="查看详情" />
+                <el-button class="icon-btn del-btn" icon="Delete" @click="deleteLog(scope.row.logId)" title="删除" />
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -161,6 +172,11 @@
             style="width: 100%"
             @row-click="handleSpeciesRowClick"
           >
+            <el-table-column label="#" width="48" align="center">
+              <template #default="scope">
+                <span class="species-badge">{{ scope.$index + 1 }}</span>
+              </template>
+            </el-table-column>
             <el-table-column label="物种名称" width="180">
               <template #default="scope">
                 <el-select
@@ -209,9 +225,8 @@
             </el-table-column>
           </el-table>
           <el-button
-            type="text"
+            class="add-species-btn"
             icon="Plus"
-            style="margin-top: 10px"
             @click="addSpecies"
             :disabled="!speciesAllList.length"
           >
@@ -238,7 +253,7 @@
       <div class="chart-container">
         <!-- 时间筛选器 -->
         <div class="time-filter" style="margin-bottom: 20px;">
-          <el-radio-group v-model="timeRange" @change="openChartDialog">
+          <el-radio-group v-model="timeRange" @change="openChartDialog" class="time-filter-group">
             <el-radio-button label="day">今日</el-radio-button>
             <el-radio-button label="week">近一周</el-radio-button>
             <el-radio-button label="month">近一个月</el-radio-button>
@@ -246,7 +261,7 @@
           </el-radio-group>
         </div>
         
-        <el-row :gutter="20">
+        <el-row :gutter="20" class="chart-row">
           <el-col :span="12">
             <div class="chart-card">
               <h3>合规情况</h3>
@@ -591,18 +606,25 @@ const initCharts = (chartData) => {
   // 1. 合规/违规饼图（增加无数据提示）
   compliancePieChart = echarts.init(document.getElementById('compliancePie'))
   const pieOption = {
-    color: ['#67c23a', '#f56c6c'],
-    tooltip: { trigger: 'item', formatter: '{b}：{c} 条 ({d}%)' },
-    legend: { orient: 'vertical', left: 'left', data: ['合规', '违规'] },
-    title: { text: chartData?.pieData?.length ? '' : '暂无合规统计数据', left: 'center', top: '45%', textStyle: { color: '#999' } },
+    backgroundColor: 'transparent',
+    color: ['#00dd77', '#ff5555'],
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}：{c} 条 ({d}%)',
+      backgroundColor: 'rgba(0,15,45,0.9)',
+      borderColor: 'rgba(0,180,255,0.3)',
+      textStyle: { color: '#e0f4ff' }
+    },
+    legend: { orient: 'vertical', left: 'left', data: ['合规', '违规'], textStyle: { color: '#88bbdd' } },
+    title: { text: chartData?.pieData?.length ? '' : '暂无合规统计数据', left: 'center', top: '45%', textStyle: { color: '#557799' } },
     series: [{
       name: '合规状态',
       type: 'pie',
       radius: ['40%', '70%'],
-      center: ['50%', '50%'],
+      center: ['55%', '50%'],
       data: chartData?.pieData || [],
-      label: { show: true, position: 'outside' },
-      // 无数据时隐藏饼图
+      label: { show: true, position: 'outside', color: '#88ccdd' },
+      labelLine: { lineStyle: { color: 'rgba(0,180,255,0.4)' } },
       silent: !chartData?.pieData?.length
     }]
   }
@@ -611,26 +633,44 @@ const initCharts = (chartData) => {
   // 2. 各捕捞鱼种重量柱状图（增加无数据提示）
   speciesWeightBarChart = echarts.init(document.getElementById('speciesWeightBar'))
   const barOption = {
-    color: ['#409eff'],
-    tooltip: { trigger: 'axis', formatter: '{b}<br/>{a}: {c} kg' },
-    title: { text: chartData?.barXData?.length ? '' : '暂无鱼种重量统计数据', left: 'center', top: '45%', textStyle: { color: '#999' } },
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      formatter: '{b}<br/>{a}: {c} kg',
+      backgroundColor: 'rgba(0,15,45,0.9)',
+      borderColor: 'rgba(0,180,255,0.3)',
+      textStyle: { color: '#e0f4ff' }
+    },
+    title: { text: chartData?.barXData?.length ? '' : '暂无鱼种重量统计数据', left: 'center', top: '45%', textStyle: { color: '#557799' } },
     grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
-    xAxis: { 
-      type: 'category', 
-      data: chartData?.barXData || [], 
+    xAxis: {
+      type: 'category',
+      data: chartData?.barXData || [],
       show: chartData?.barXData?.length,
-      axisLabel: { rotate: 45 }  // 旋转标签以适应较长的鱼种名称
+      axisLabel: { rotate: 45, color: '#88bbdd' },
+      axisLine: { lineStyle: { color: 'rgba(0,150,200,0.4)' } },
+      splitLine: { lineStyle: { color: 'rgba(0,100,160,0.2)' } }
     },
-    yAxis: { 
-      type: 'value', 
+    yAxis: {
+      type: 'value',
       name: '重量(kg)',
-      show: chartData?.barXData?.length 
+      show: chartData?.barXData?.length,
+      nameTextStyle: { color: '#88bbdd' },
+      axisLabel: { color: '#88bbdd' },
+      axisLine: { lineStyle: { color: 'rgba(0,150,200,0.4)' } },
+      splitLine: { lineStyle: { color: 'rgba(0,100,160,0.2)' } }
     },
-    series: [{ 
-      name: '鱼种重量', 
-      type: 'bar', 
-      data: chartData?.barYData || [], 
+    series: [{
+      name: '鱼种重量',
+      type: 'bar',
+      data: chartData?.barYData || [],
       barWidth: '60%',
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#00d4ff' },
+          { offset: 1, color: '#004488' }
+        ])
+      },
       silent: !chartData?.barXData?.length
     }]
   }
@@ -701,49 +741,86 @@ watch(
 </script>
 
 <style scoped>
+/* ===== 页面基础 ===== */
 .fishing-log-page {
   width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #f0f8ff, #e6f7ff);
   overflow: hidden;
 }
 
+/* ===== 顶部栏 ===== */
 .log-header {
   height: 64px;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 12px rgba(64, 158, 255, 0.1);
+  background: rgba(0,10,30,0.92);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 2px 20px rgba(0,0,0,0.5);
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 40px;
-  border-bottom: 1px solid rgba(64, 158, 255, 0.1);
+  border-bottom: 1px solid rgba(0,212,255,0.25);
+  flex-shrink: 0;
 }
 .header-left {
-  font-size: 18px;
-  font-weight: bold;
-  color: #0066cc;
-  letter-spacing: 1px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #e8f6ff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px rgba(0,212,255,0.4);
 }
 .header-right {
   display: flex;
   gap: 10px;
 }
 
+/* 新增按钮（青色渐变） */
+.btn-add {
+  background: linear-gradient(135deg, #00d4ff, #0099cc) !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 12px rgba(0,212,255,0.35) !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+}
+.btn-add:hover { transform: translateY(-1px) !important; box-shadow: 0 4px 18px rgba(0,212,255,0.55) !important; }
+
+/* 导出按钮（深蓝渐变） */
+.btn-export {
+  background: linear-gradient(135deg, #0055aa, #003377) !important;
+  border: 1px solid rgba(0,120,220,0.5) !important;
+  color: #aaddff !important;
+  font-weight: 600 !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+}
+.btn-export:hover:not(.is-disabled) { transform: translateY(-1px) !important; box-shadow: 0 4px 18px rgba(0,80,180,0.5) !important; }
+
+/* 可视化按钮（深蓝紫渐变） */
+.btn-chart {
+  background: linear-gradient(135deg, #1a3d6e, #0d2447) !important;
+  border: 1px solid rgba(0,160,220,0.4) !important;
+  color: #88ccff !important;
+  font-weight: 600 !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+}
+.btn-chart:hover:not(.is-disabled) { transform: translateY(-1px) !important; box-shadow: 0 4px 18px rgba(0,100,200,0.4) !important; }
+
+/* ===== 主内容区 ===== */
 .log-main {
   flex: 1;
   padding: 20px 40px;
   overflow-y: auto;
 }
 
+/* ===== 查询区 ===== */
 .log-search {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(0,15,45,0.82);
   padding: 15px 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(0,150,200,0.2);
+  backdrop-filter: blur(8px);
 }
 .search-form {
   display: flex;
@@ -752,64 +829,456 @@ watch(
   gap: 15px;
 }
 
+/* ===== 表格区 ===== */
 .log-table {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(0,15,45,0.82);
   padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-.pagination {
-  margin-top: 20px;
-  text-align: right;
+  border-radius: 10px;
+  border: 1px solid rgba(0,150,200,0.2);
+  backdrop-filter: blur(8px);
 }
 
+/* logId 海洋编号 */
+.log-id-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #66d8ff;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* 合规状态 */
+.status-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot--success {
+  background: #00ff88;
+  animation: pulse-green 1.8s ease-in-out infinite;
+}
+.status-dot--danger {
+  background: #ff4444;
+  animation: pulse-red 1.8s ease-in-out infinite;
+}
+.status-text--success { color: #00dd77; }
+.status-text--danger  { color: #ff5555; }
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 4px rgba(0,255,136,0.6); transform: scale(1); }
+  50%       { box-shadow: 0 0 10px rgba(0,255,136,0.9); transform: scale(1.3); }
+}
+@keyframes pulse-red {
+  0%, 100% { box-shadow: 0 0 4px rgba(255,68,68,0.6); transform: scale(1); }
+  50%       { box-shadow: 0 0 10px rgba(255,68,68,0.9); transform: scale(1.3); }
+}
+
+/* 表格深海主题覆盖 */
+:deep(.log-table .el-table),
+:deep(.log-table .el-table tr),
+:deep(.log-table .el-table th.el-table__cell),
+:deep(.log-table .el-table td.el-table__cell) {
+  background-color: transparent !important;
+}
+:deep(.log-table .el-table) {
+  --el-table-bg-color: rgba(0,15,50,0.7) !important;
+  --el-table-tr-bg-color: rgba(0,15,50,0.7) !important;
+  --el-table-header-bg-color: rgba(0,25,70,0.9) !important;
+  --el-table-row-hover-bg-color: rgba(0,160,220,0.18) !important;
+  --el-table-border-color: rgba(0,130,180,0.2) !important;
+  --el-table-text-color: #b8dff0 !important;
+  --el-table-header-text-color: #66d8ff !important;
+  color: #b8dff0 !important;
+}
+:deep(.log-table .el-table th.el-table__cell) {
+  background-color: rgba(0,25,70,0.9) !important;
+  color: #66d8ff !important;
+  border-bottom-color: rgba(0,130,180,0.3) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+}
+:deep(.log-table .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
+  background-color: rgba(0,30,75,0.6) !important;
+}
+:deep(.log-table .el-table__body tr.hover-row > td.el-table__cell) {
+  background-color: rgba(0,160,220,0.18) !important;
+  color: #00d4ff !important;
+}
+:deep(.log-table .el-table__empty-block) {
+  background-color: rgba(0,15,50,0.7) !important;
+}
+:deep(.log-table .el-table__empty-text) {
+  color: #5577aa !important;
+}
+:deep(.log-table .el-table__border-left-patch),
+:deep(.log-table .el-table__inner-wrapper::before),
+:deep(.log-table .el-table__border-bottom-patch) {
+  background-color: rgba(0,130,180,0.25) !important;
+}
+
+/* 操作按钮行 */
+.action-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* 图标操作按钮 */
+.icon-btn {
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+  font-size: 15px !important;
+}
+.view-btn {
+  background: rgba(0,100,200,0.25) !important;
+  border: 1px solid rgba(0,160,255,0.35) !important;
+  color: #66ccff !important;
+}
+.view-btn:hover { transform: scale(1.18) !important; background: rgba(0,130,220,0.4) !important; box-shadow: 0 0 10px rgba(0,180,255,0.4) !important; }
+.del-btn {
+  background: rgba(180,30,30,0.2) !important;
+  border: 1px solid rgba(255,80,80,0.3) !important;
+  color: #ff6666 !important;
+}
+.del-btn:hover { transform: scale(1.18) !important; background: rgba(200,40,40,0.35) !important; box-shadow: 0 0 10px rgba(255,80,80,0.4) !important; }
+
+.pagination { margin-top: 20px; text-align: right; }
+
+/* ===== 弹窗 ===== */
+:deep(.el-dialog) {
+  background: rgba(0,12,35,0.95) !important;
+  border: 1px solid rgba(0,180,255,0.25) !important;
+  backdrop-filter: blur(20px) !important;
+  border-radius: 12px !important;
+}
+:deep(.el-dialog__header) {
+  border-bottom: 1px solid rgba(0,150,220,0.2) !important;
+  padding: 18px 24px 14px !important;
+}
+:deep(.el-dialog__title) {
+  color: #66e8ff !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  letter-spacing: 2px !important;
+}
+
+/* 表单样式 */
 .log-form {
   max-height: 500px;
   overflow-y: auto;
   padding-right: 10px;
 }
 
-.chart-container {
-  padding: 10px;
+/* 弹窗内物种表格深海主题覆盖 */
+:deep(.log-form .el-table),
+:deep(.log-form .el-table tr),
+:deep(.log-form .el-table th.el-table__cell),
+:deep(.log-form .el-table td.el-table__cell) {
+  background-color: transparent !important;
 }
-.chart-card {
-  background: rgba(255, 255, 255, 0.9);
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+:deep(.log-form .el-table) {
+  --el-table-bg-color: rgba(0,20,60,0.6) !important;
+  --el-table-tr-bg-color: rgba(0,20,60,0.6) !important;
+  --el-table-header-bg-color: rgba(0,30,80,0.85) !important;
+  --el-table-row-hover-bg-color: rgba(0,130,200,0.18) !important;
+  --el-table-border-color: rgba(0,120,180,0.25) !important;
+  --el-table-text-color: #b8dff0 !important;
+  --el-table-header-text-color: #66d8ff !important;
+  color: #b8dff0 !important;
 }
-.chart-card h3 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  color: #0066cc;
-  font-weight: bold;
+:deep(.log-form .el-table th.el-table__cell) {
+  background-color: rgba(0,30,80,0.85) !important;
+  color: #66d8ff !important;
+  border-bottom-color: rgba(0,120,180,0.3) !important;
+  font-weight: 600 !important;
+}
+:deep(.log-form .el-table__body tr.hover-row > td.el-table__cell) {
+  background-color: rgba(0,130,200,0.18) !important;
+}
+:deep(.log-form .el-table__empty-block) {
+  background-color: rgba(0,20,60,0.6) !important;
+}
+:deep(.log-form .el-table__inner-wrapper::before) {
+  background-color: rgba(0,120,180,0.25) !important;
 }
 
-/* 响应式适配 */
+/* 弹窗内表单控件深海主题 */
+:deep(.el-dialog .el-input__wrapper),
+:deep(.el-dialog .el-textarea__inner) {
+  background-color: rgba(0,20,60,0.7) !important;
+  box-shadow: 0 0 0 1px rgba(0,150,220,0.3) inset !important;
+}
+:deep(.el-dialog .el-input__wrapper:hover),
+:deep(.el-dialog .el-textarea__inner:hover) {
+  box-shadow: 0 0 0 1px rgba(0,200,255,0.5) inset !important;
+}
+:deep(.el-dialog .el-input__wrapper.is-focus),
+:deep(.el-dialog .el-textarea__inner:focus) {
+  box-shadow: 0 0 0 1px rgba(0,212,255,0.7) inset !important;
+}
+:deep(.el-dialog .el-input__inner),
+:deep(.el-dialog .el-textarea__inner) {
+  color: #cceeff !important;
+  background-color: transparent !important;
+}
+:deep(.el-dialog .el-input__inner::placeholder),
+:deep(.el-dialog .el-textarea__inner::placeholder) {
+  color: rgba(100,170,210,0.5) !important;
+}
+/* select 触发器 */
+:deep(.el-dialog .el-select .el-input__wrapper) {
+  background-color: rgba(0,20,60,0.7) !important;
+}
+/* date-picker 触发器 */
+:deep(.el-dialog .el-date-editor .el-input__wrapper) {
+  background-color: rgba(0,20,60,0.7) !important;
+}
+:deep(.el-dialog .el-date-editor .el-input__prefix-inner .el-icon),
+:deep(.el-dialog .el-input__suffix-inner .el-icon) {
+  color: #55aacc !important;
+}
+/* form-item label */
+:deep(.el-dialog .el-form-item__label) {
+  color: #88ccdd !important;
+}
+:deep(.el-form-item__error) {
+  color: #ff5555 !important;
+  text-shadow: 0 0 8px rgba(255,60,60,0.6) !important;
+  font-weight: 500 !important;
+}
+
+/* 物种序号徽章 */
+.species-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0088cc, #005599);
+  color: #aaddff;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 0 6px rgba(0,150,220,0.4);
+}
+
+/* 添加物种虚线按钮 */
+.add-species-btn {
+  margin-top: 10px !important;
+  width: 100% !important;
+  border: 2px dashed rgba(0,180,255,0.45) !important;
+  background: rgba(0,50,100,0.15) !important;
+  color: #66ccff !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  transition: border-style 0.2s, border-color 0.2s, background 0.2s !important;
+}
+.add-species-btn:hover:not(.is-disabled) {
+  border-style: solid !important;
+  border-color: rgba(0,212,255,0.7) !important;
+  background: rgba(0,70,130,0.25) !important;
+  color: #00d4ff !important;
+}
+.add-species-btn.is-disabled { opacity: 0.4 !important; }
+
+/* ===== 可视化弹窗 ===== */
+.chart-container { padding: 10px; }
+.time-filter {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+/* 药丸形时间筛选器 */
+:deep(.time-filter-group .el-radio-button__inner) {
+  background: rgba(0,30,70,0.7) !important;
+  border-color: rgba(0,150,220,0.35) !important;
+  color: #88bbdd !important;
+  transition: all 0.25s !important;
+}
+:deep(.time-filter-group .el-radio-button:first-child .el-radio-button__inner) {
+  border-radius: 20px 0 0 20px !important;
+}
+:deep(.time-filter-group .el-radio-button:last-child .el-radio-button__inner) {
+  border-radius: 0 20px 20px 0 !important;
+}
+:deep(.time-filter-group .el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: linear-gradient(90deg, #00aacc, #0077aa) !important;
+  border-color: #00aacc !important;
+  color: #fff !important;
+  box-shadow: 0 0 12px rgba(0,170,204,0.45) !important;
+}
+
+/* 图表卡片 */
+.chart-card {
+  background: rgba(0,15,45,0.85);
+  border: 1px solid rgba(0,150,200,0.2);
+  padding: 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+.chart-card h3 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: #66e8ff;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0,150,200,0.2);
+}
+
+/* 图表间分隔线 */
+:deep(.chart-row > .el-col:first-child) {
+  border-right: 1px solid rgba(0,150,200,0.15);
+}
+
+/* ===== 响应式 ===== */
 @media (max-width: 992px) {
-  .log-header {
-    padding: 0 20px;
-  }
-  .header-left {
-    font-size: 16px;
-  }
-  .header-right .el-button {
-    padding: 6px 8px;
-    font-size: 12px;
-  }
-  .log-main {
-    padding: 10px 15px;
-  }
-  .chart-container .el-row {
-    flex-direction: column;
-  }
-  .chart-container .el-col {
-    width: 100% !important;
-    margin-bottom: 15px;
-  }
-  .el-dialog {
-    width: 95% !important;
-  }
+  .log-header { padding: 0 20px; }
+  .header-left { font-size: 15px; }
+  .log-main { padding: 10px 15px; }
+  :deep(.chart-row > .el-col:first-child) { border-right: none; border-bottom: 1px solid rgba(0,150,200,0.15); }
+  :deep(.el-dialog) { width: 95% !important; }
+}
+</style>
+
+<!-- 日历弹出面板（Teleport 到 body，需全局样式覆盖） -->
+<style>
+.el-picker-panel {
+  background: linear-gradient(145deg, rgba(0, 18, 52, 0.97), rgba(0, 10, 35, 0.99)) !important;
+  border: 1px solid rgba(0, 212, 255, 0.28) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 80, 160, 0.2) !important;
+  color: #c8e8ff !important;
+}
+
+/* 顶部月份/年份导航 */
+.el-date-picker__header {
+  color: #88ccee !important;
+}
+.el-date-picker__header .el-date-picker__header-label {
+  color: #a8deff !important;
+  font-weight: 600 !important;
+}
+.el-date-picker__header .el-date-picker__header-label:hover {
+  color: #00d4ff !important;
+}
+.el-picker-panel__icon-btn {
+  color: #55aacc !important;
+}
+.el-picker-panel__icon-btn:hover {
+  color: #00d4ff !important;
+}
+
+/* 星期行 */
+.el-date-table th {
+  color: rgba(0, 212, 255, 0.6) !important;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.15) !important;
+  font-weight: 600 !important;
+  background: transparent !important;
+}
+
+/* 日期单元格 */
+.el-date-table td {
+  background: transparent !important;
+}
+.el-date-table td .el-date-table-cell {
+  background: transparent !important;
+}
+.el-date-table td .el-date-table-cell__text {
+  color: #c0e0f8 !important;
+  border-radius: 6px !important;
+  transition: all 0.2s !important;
+}
+
+/* 鼠标悬停 */
+.el-date-table td:not(.disabled):not(.current):hover .el-date-table-cell__text {
+  background: rgba(0, 180, 255, 0.18) !important;
+  color: #00d4ff !important;
+}
+
+/* 今日 */
+.el-date-table td.today .el-date-table-cell__text {
+  color: #00d4ff !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(0, 212, 255, 0.5) !important;
+  background: rgba(0, 180, 255, 0.1) !important;
+}
+
+/* 已选中 */
+.el-date-table td.current:not(.disabled) .el-date-table-cell__text,
+.el-date-table td.selected .el-date-table-cell__text {
+  background: linear-gradient(135deg, #00b4cc, #006688) !important;
+  color: #fff !important;
+  box-shadow: 0 0 10px rgba(0, 200, 220, 0.5) !important;
+  border-radius: 6px !important;
+}
+
+/* 禁用日期 */
+.el-date-table td.disabled .el-date-table-cell__text,
+.el-date-table td.disabled {
+  background: transparent !important;
+  color: rgba(100, 150, 180, 0.35) !important;
+  cursor: not-allowed !important;
+}
+
+/* 上/下月灰色日期 */
+.el-date-table td.prev-month .el-date-table-cell__text,
+.el-date-table td.next-month .el-date-table-cell__text {
+  color: rgba(100, 160, 200, 0.35) !important;
+}
+
+/* 底部按钮栏 */
+.el-picker-panel__footer {
+  background: rgba(0, 15, 45, 0.9) !important;
+  border-top: 1px solid rgba(0, 212, 255, 0.15) !important;
+}
+.el-picker-panel__footer .el-button--text {
+  color: #55aacc !important;
+}
+.el-picker-panel__footer .el-button--text:hover {
+  color: #00d4ff !important;
+}
+.el-picker-panel__footer .el-button--default {
+  background: rgba(0, 40, 80, 0.7) !important;
+  border-color: rgba(0, 180, 220, 0.4) !important;
+  color: #88ccee !important;
+}
+.el-picker-panel__footer .el-button--primary {
+  background: linear-gradient(135deg, #00b4cc, #006688) !important;
+  border: none !important;
+  color: #fff !important;
+}
+
+/* panel 内的输入框（时间选择器等） */
+.el-picker-panel .el-input__wrapper {
+  background: rgba(0, 20, 55, 0.7) !important;
+  box-shadow: 0 0 0 1px rgba(0, 180, 220, 0.3) inset !important;
+}
+.el-picker-panel .el-input__inner {
+  color: #c0e4ff !important;
+  background: transparent !important;
+}
+
+/* 年月选择下拉 */
+.el-date-picker__header-label {
+  color: #a8deff !important;
 }
 </style>
