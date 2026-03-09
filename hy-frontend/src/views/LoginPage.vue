@@ -10,7 +10,7 @@
 
       <!-- Logo 区域 -->
       <div class="login-logo">
-        <span class="logo-icon">⚓</span>
+        <img src="@/assets/school-logo.png" alt="学校校徽" class="school-logo-icon" />
       </div>
       <div class="login-title">海渔合规管理平台</div>
       <div class="login-subtitle">Marine Fishery Compliance System</div>
@@ -325,14 +325,21 @@ onBeforeUnmount(() => {
   text-align: center;
   margin-bottom: 10px;
 }
-.logo-icon {
-  font-size: 40px;
+
+.school-logo-icon {
+  width: 108px;  /* 增大宽度 */
+  height: 108px; /* 增大高度 */
   display: inline-block;
-  animation: anchor-float 3s ease-in-out infinite;
+  animation: logo-float 3s ease-in-out infinite;
   filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.8));
+  border-radius: 50%; /* 圆形裁剪 */
+  object-fit: cover; /* 保持比例并填充整个圆形区域 */
+  /* 应用青蓝色调滤镜，使校徽与整体风格协调 */
+  mix-blend-mode: screen; /* 这会使白色背景透明，适合浅色logo */
+  opacity: 0.9;
 }
 
-@keyframes anchor-float {
+@keyframes logo-float {
   0%, 100% { transform: translateY(0);    }
   50%       { transform: translateY(-6px); }
 }
